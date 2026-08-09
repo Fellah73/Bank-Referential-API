@@ -1,5 +1,11 @@
 package dz.banquealgerie.referential.service.impl;
 
+import java.util.stream.Collectors;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.util.Streamable;
 import org.springframework.stereotype.Service;
 
 import dz.banquealgerie.referential.domain.dto.geographic.PaysDto;
@@ -44,6 +50,17 @@ public class GeographicServiceImpl implements GeographicService {
 
             return paysToSave;
 
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    @Override
+    public Page<PaysDto> getAllPays(Pageable pageable) {
+        try {
+            Page<PaysEntity> paysList = paysRepository.findAll(pageable);
+            Page<PaysDto> paysDtoList = geographicMapper.toPaysDtoList(paysList);
+            return paysDtoList;
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage());
         }
@@ -103,6 +120,36 @@ public class GeographicServiceImpl implements GeographicService {
             // saving the updated country
             paysRepository.save(existingPays);
 
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    @Override
+    public Page<PaysDto> searchPays(String searchTerm, Pageable pageable) {
+        try {
+            Page<PaysEntity> paysList = paysRepository.findAll(pageable);
+
+            Streamable<PaysEntity> streamablePaysList = Streamable.of(paysList.getContent());
+
+            // search by abreviation or libelle
+            if (searchTerm != null && !searchTerm.isEmpty()) {
+                streamablePaysList = streamablePaysList
+                        .filter(pays -> pays.getLibelle().contains(searchTerm)
+                                || pays.getAbreviation().contains(searchTerm));
+            }
+            if (streamablePaysList.isEmpty()) {
+                throw new RuntimeException("No countries found for the given search criteria");
+            }
+
+            // streamble to page
+            paysList = streamablePaysList.toList().stream()
+                    .collect(Collectors.collectingAndThen(Collectors.toList(),
+                            list -> new PageImpl<>(list, pageable, list.size())));
+
+            // entites to dto
+            Page<PaysDto> paysDtoList = geographicMapper.toPaysDtoList(paysList);
+            return paysDtoList;
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage());
         }
