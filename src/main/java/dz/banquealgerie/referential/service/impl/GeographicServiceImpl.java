@@ -9,6 +9,7 @@ import org.springframework.data.util.Streamable;
 import org.springframework.stereotype.Service;
 
 import dz.banquealgerie.referential.domain.dto.geographic.PaysDto;
+import dz.banquealgerie.referential.domain.dto.geographic.PaysUpdateDto;
 import dz.banquealgerie.referential.domain.entities.UserEntity;
 import dz.banquealgerie.referential.domain.entities.geographic.PaysEntity;
 import dz.banquealgerie.referential.mappers.GeographicMapper;
@@ -28,9 +29,13 @@ public class GeographicServiceImpl implements GeographicService {
 
     // create country
     @Override
-    public PaysEntity createPays(PaysEntity pays, UserEntity currentUser) {
+    public PaysEntity createPays(PaysDto paysDto, UserEntity currentUser) {
 
         try {
+            
+            // convert dto to entity
+            PaysEntity pays = geographicMapper.toPaysEntity(paysDto);
+
             PaysEntity existingPays = paysRepository.findPaysByCode(pays.getCode());
             if (existingPays != null) {
                 throw new RuntimeException("Country with code " + pays.getCode() + " already exists");
@@ -55,6 +60,7 @@ public class GeographicServiceImpl implements GeographicService {
         }
     }
 
+    // get all countries with pagination
     @Override
     public Page<PaysDto> getAllPays(Pageable pageable) {
         try {
@@ -66,27 +72,31 @@ public class GeographicServiceImpl implements GeographicService {
         }
     }
 
+    // get country by code
     @Override
-    public PaysEntity getPaysByCode(String code) {
+    public PaysDto getPaysByCode(String code) {
         try {
             PaysEntity existingPays = paysRepository.findPaysByCode(code);
             if (existingPays == null) {
                 throw new RuntimeException("Country with code " + code + " does not exist");
             }
 
-            return existingPays;
+            return geographicMapper.toPaysDto(existingPays);
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage());
         }
     }
 
+    // update country
     @Override
-    public PaysDto updatePays(String code, PaysEntity pays, UserEntity currentUser) {
+    public PaysDto updatePays(String code, PaysUpdateDto paysDto, UserEntity currentUser) {
         try {
             PaysEntity existingPays = paysRepository.findPaysByCode(code);
             if (existingPays == null) {
                 throw new RuntimeException("Country with code " + code + " does not exist");
             }
+
+            PaysEntity pays = geographicMapper.toPaysEntity(paysDto);
 
             existingPays.setAbreviation(
                     pays.getAbreviation() != null ? pays.getAbreviation() : existingPays.getAbreviation());
@@ -105,6 +115,7 @@ public class GeographicServiceImpl implements GeographicService {
         }
     }
 
+    // change country status
     @Override
     public void changePaysStatus(String code, UserEntity currentUser) {
         try {
@@ -125,6 +136,7 @@ public class GeographicServiceImpl implements GeographicService {
         }
     }
 
+    // search countries by abreviation or libelle
     @Override
     public Page<PaysDto> searchPays(String searchTerm, Pageable pageable) {
         try {
@@ -135,8 +147,8 @@ public class GeographicServiceImpl implements GeographicService {
             // search by abreviation or libelle
             if (searchTerm != null && !searchTerm.isEmpty()) {
                 streamablePaysList = streamablePaysList
-                        .filter(pays -> pays.getLibelle().contains(searchTerm)
-                                || pays.getAbreviation().contains(searchTerm));
+                        .filter(pays -> pays.getLibelle().toLowerCase().contains(searchTerm.toLowerCase())
+                                || pays.getAbreviation().toLowerCase().contains(searchTerm.toLowerCase()));
             }
             if (streamablePaysList.isEmpty()) {
                 throw new RuntimeException("No countries found for the given search criteria");

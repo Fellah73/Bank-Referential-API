@@ -20,9 +20,10 @@ import dz.banquealgerie.referential.domain.dto.ApiResponse;
 import dz.banquealgerie.referential.domain.dto.geographic.PaysDto;
 import dz.banquealgerie.referential.domain.dto.geographic.PaysUpdateDto;
 import dz.banquealgerie.referential.domain.entities.UserEntity;
-import dz.banquealgerie.referential.domain.entities.geographic.PaysEntity;
 import dz.banquealgerie.referential.mappers.GeographicMapper;
 import dz.banquealgerie.referential.service.GeographicService;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -38,15 +39,13 @@ public class GeographicController {
     // create country
     @PostMapping("/pays")
     public ResponseEntity<ApiResponse<PaysDto>> createCountry(
-            @RequestBody PaysDto paysToCreateDTO,
+            @Valid @RequestBody PaysDto paysToCreateDTO,
             @AuthenticationPrincipal UserEntity currentUser) {
 
         try {
 
-            PaysEntity pays = geographicMapper.toPaysEntity(paysToCreateDTO);
-
             // created pays
-            geographicService.createPays(pays, currentUser);
+            geographicService.createPays(paysToCreateDTO, currentUser);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.<PaysDto>builder()
                     .success(true)
@@ -87,16 +86,16 @@ public class GeographicController {
 
     // get country by code
     @GetMapping("/pays/{code}")
-    public ResponseEntity<ApiResponse<PaysDto>> getCountryByCode(@PathVariable String code) {
+    public ResponseEntity<ApiResponse<PaysDto>> getCountryByCode(
+            @PathVariable @Pattern(regexp = "^[0-9]{3}$", message = "Le code pays doit contenir exactement 3 chiffres") String code) {
         try {
-            PaysEntity pays = geographicService.getPaysByCode(code);
-            PaysDto paysDto = geographicMapper.toPaysDto(pays);
+            PaysDto pays = geographicService.getPaysByCode(code);
 
             return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<PaysDto>builder()
                     .success(true)
                     .message("Pays retrieved successfully")
                     .statusCode(200)
-                    .data(paysDto)
+                    .data(pays)
                     .build());
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<PaysDto>builder()
@@ -110,15 +109,13 @@ public class GeographicController {
     // update country
     @PatchMapping("/pays/{code}")
     public ResponseEntity<ApiResponse<PaysDto>> updateCountry(
-            @PathVariable String code,
+            @PathVariable @Pattern(regexp = "^[0-9]{3}$", message = "Le code pays doit contenir exactement 3 chiffres") String code,
             @RequestBody PaysUpdateDto paysToUpdateDTO,
             @AuthenticationPrincipal UserEntity currentUser) {
 
         try {
-            PaysEntity pays = geographicMapper.toPaysEntity(paysToUpdateDTO);
-
             // updated pays
-            PaysDto updatedPays = geographicService.updatePays(code, pays, currentUser);
+            PaysDto updatedPays = geographicService.updatePays(code, paysToUpdateDTO, currentUser);
 
             return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<PaysDto>builder()
                     .success(true)
@@ -136,9 +133,9 @@ public class GeographicController {
     }
 
     // change country status
-    @PatchMapping("/pays/status/{code}")
+    @PatchMapping("/pays/{code}/status")
     public ResponseEntity<ApiResponse<Void>> changeCountryStatus(
-            @PathVariable String code,
+            @PathVariable @Pattern(regexp = "^[0-9]{3}$", message = "Le code pays doit contenir exactement 3 chiffres") String code,
             @AuthenticationPrincipal UserEntity currentUser) {
 
         try {
@@ -159,7 +156,7 @@ public class GeographicController {
         }
     }
 
-    // search countries by code or libelle
+    // search countries by abreviation or libelle
     @GetMapping("/pays/search")
     public ResponseEntity<ApiResponse<Page<PaysDto>>> searchCountries(
             @RequestParam(required = false) String searchTerm,
