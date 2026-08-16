@@ -7,6 +7,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,6 +18,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import dz.banquealgerie.referential.domain.dto.ApiResponse;
+import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneDto;
+import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneUpdateDto;
 import dz.banquealgerie.referential.domain.dto.geographic.pays.PaysDto;
 import dz.banquealgerie.referential.domain.dto.geographic.pays.PaysUpdateDto;
 import dz.banquealgerie.referential.domain.dto.geographic.wilaya.WilayaDto;
@@ -87,7 +90,7 @@ public class GeographicController {
     // get country by code
     @GetMapping("/pays/{code}")
     public ResponseEntity<ApiResponse<PaysDto>> getCountryByCode(
-            @PathVariable @Pattern(regexp = "^[0-9]{3}$", message = "Le code pays doit contenir exactement 3 chiffres") String code) {
+            @Validated @PathVariable @Pattern(regexp = "^[0-9]{3}$", message = "Le code pays doit contenir exactement 3 chiffres") String code) {
         try {
             PaysDto pays = geographicService.getPaysByCode(code);
 
@@ -109,7 +112,7 @@ public class GeographicController {
     // update country
     @PatchMapping("/pays/{code}")
     public ResponseEntity<ApiResponse<PaysDto>> updateCountry(
-            @PathVariable @Pattern(regexp = "^[0-9]{3}$", message = "Le code pays doit contenir exactement 3 chiffres") String code,
+            @Validated @PathVariable @Pattern(regexp = "^[0-9]{3}$", message = "Le code pays doit contenir exactement 3 chiffres") String code,
             @RequestBody PaysUpdateDto paysToUpdateDTO,
             @AuthenticationPrincipal UserEntity currentUser) {
 
@@ -135,7 +138,7 @@ public class GeographicController {
     // change country status
     @PatchMapping("/pays/{code}/status")
     public ResponseEntity<ApiResponse<Void>> changeCountryStatus(
-            @PathVariable @Pattern(regexp = "^[0-9]{3}$", message = "Le code pays doit contenir exactement 3 chiffres") String code,
+            @Validated @PathVariable @Pattern(regexp = "^[0-9]{3}$", message = "Le code pays doit contenir exactement 3 chiffres") String code,
             @AuthenticationPrincipal UserEntity currentUser) {
 
         try {
@@ -230,7 +233,7 @@ public class GeographicController {
     // get wilaya by code
     @GetMapping("/wilaya/{code}")
     public ResponseEntity<ApiResponse<WilayaDto>> getWilayaByCode(
-            @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code wilaya doit contenir exactement 2 chiffres") String code) {
+            @Validated @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code wilaya doit contenir exactement 2 chiffres") String code) {
         try {
             WilayaDto wilaya = geographicService.getWilayaByCode(code);
 
@@ -252,7 +255,7 @@ public class GeographicController {
     // update wilaya
     @PatchMapping("/wilaya/{code}")
     public ResponseEntity<ApiResponse<WilayaDto>> updateWilaya(
-            @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code wilaya doit contenir exactement 2 chiffres") String code,
+            @Validated @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code wilaya doit contenir exactement 2 chiffres") String code,
             @Valid @RequestBody WilayaUpdateDto wilayaToUpdateDTO,
             @AuthenticationPrincipal UserEntity currentUser) {
 
@@ -278,7 +281,7 @@ public class GeographicController {
     // change wilaya status
     @PatchMapping("/wilaya/{code}/status")
     public ResponseEntity<ApiResponse<Void>> changeWilayaStatus(
-            @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code wilaya doit contenir exactement 2 chiffres") String code,
+            @Validated @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code wilaya doit contenir exactement 2 chiffres") String code,
             @AuthenticationPrincipal UserEntity currentUser) {
 
         try {
@@ -302,7 +305,7 @@ public class GeographicController {
     // search wilayas by abreviation or libelle
     @GetMapping("/wilaya/search")
     public ResponseEntity<ApiResponse<Page<WilayaDto>>> searchWilayas(
-            @RequestParam(required = false) @Pattern(regexp = "^([a-zA-Z]+|[\\p{IsArabic}\\s]+)$", message = "Le terme de recherche ne peut contenir que des lettres et des chiffres") String searchTerm,
+            @RequestParam(required = false) @Pattern(regexp = "^([a-zA-Z\\s]+|[\\p{IsArabic}\\s]+)$", message = "Le terme de recherche ne peut contenir que des lettres et des chiffres") String searchTerm,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         try {
             Page<WilayaDto> wilayaList = geographicService.searchWilayas(searchTerm, pageable);
@@ -322,4 +325,105 @@ public class GeographicController {
         }
     }
 
+    // commune routes
+
+    // create commune
+    @PostMapping("/wilaya/{wilayaCode}/commune")
+    public ResponseEntity<ApiResponse<CommuneDto>> createCommune(
+            @Validated @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code wilaya doit contenir exactement 2 chiffres") String wilayaCode,
+            @Valid @RequestBody CommuneDto communeToCreateDTO,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        try {
+
+            // created commune
+            geographicService.createCommune(wilayaCode, communeToCreateDTO, currentUser);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.<CommuneDto>builder()
+                    .success(true)
+                    .message("Commune created successfully")
+                    .statusCode(201)
+                    .data(communeToCreateDTO)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<CommuneDto>builder()
+                    .success(false)
+                    .message("Failed to create commune: " + e.getMessage())
+                    .statusCode(500)
+                    .build());
+        }
+    }
+
+    // get commune by wilaya code
+    @GetMapping("/wilaya/{wilayaCode}/commune")
+    public ResponseEntity<ApiResponse<Page<CommuneDto>>> getCommunesByWilayaCode(
+            @Validated @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code wilaya doit contenir exactement 2 chiffres") String wilayaCode,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        try {
+            Page<CommuneDto> communeList = geographicService.getCommunesByWilayaCode(wilayaCode, pageable);
+
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<Page<CommuneDto>>builder()
+                    .success(true)
+                    .message("Commune list retrieved successfully")
+                    .statusCode(200)
+                    .data(communeList)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<Page<CommuneDto>>builder()
+                    .success(false)
+                    .message("Failed to retrieve commune list: " + e.getMessage())
+                    .statusCode(500)
+                    .build());
+        }
+    }
+
+    // update commune
+    @PatchMapping("/wilaya/{wilayaCode}/commune/{communeCode}")
+    public ResponseEntity<ApiResponse<CommuneDto>> updateCommune(
+            @Validated @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code wilaya doit contenir exactement 2 chiffres") String wilayaCode,
+            @Validated @PathVariable @Pattern(regexp = "^[0-9]{4}$", message = "Le code commune doit contenir exactement 4 chiffres") String communeCode,
+            @Valid @RequestBody CommuneUpdateDto communeToUpdateDTO,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        try {
+            CommuneDto updatedCommune = geographicService.updateCommune(wilayaCode, communeCode, communeToUpdateDTO,
+                    currentUser);
+
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<CommuneDto>builder()
+                    .success(true)
+                    .message("Commune updated successfully")
+                    .statusCode(200)
+                    .data(updatedCommune)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<CommuneDto>builder()
+                    .success(false)
+                    .message("Failed to update commune: " + e.getMessage())
+                    .statusCode(500)
+                    .build());
+        }
+    }
+
+    // change commune status
+    @PatchMapping("/commune/{communeCode}/status")
+    public ResponseEntity<ApiResponse<Void>> changeCommuneStatus(
+            @Validated @PathVariable @Pattern(regexp = "^[0-9]{4}$", message = "Le code commune doit contenir exactement 4 chiffres") String communeCode,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        try {
+            geographicService.changeCommuneStatus(communeCode, currentUser);
+
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<Void>builder()
+                    .success(true)
+                    .message("Commune status changed successfully")
+                    .statusCode(200)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<Void>builder()
+                    .success(false)
+                    .message("Failed to change commune status: " + e.getMessage())
+                    .statusCode(500)
+                    .build());
+        }
+    }
 }

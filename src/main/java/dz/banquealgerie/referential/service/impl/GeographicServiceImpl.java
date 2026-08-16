@@ -8,14 +8,18 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.util.Streamable;
 import org.springframework.stereotype.Service;
 
+import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneDto;
+import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneUpdateDto;
 import dz.banquealgerie.referential.domain.dto.geographic.pays.PaysDto;
 import dz.banquealgerie.referential.domain.dto.geographic.pays.PaysUpdateDto;
 import dz.banquealgerie.referential.domain.dto.geographic.wilaya.WilayaDto;
 import dz.banquealgerie.referential.domain.dto.geographic.wilaya.WilayaUpdateDto;
 import dz.banquealgerie.referential.domain.entities.UserEntity;
+import dz.banquealgerie.referential.domain.entities.geographic.CommuneEntity;
 import dz.banquealgerie.referential.domain.entities.geographic.PaysEntity;
 import dz.banquealgerie.referential.domain.entities.geographic.WilayaEntity;
 import dz.banquealgerie.referential.mappers.GeographicMapper;
+import dz.banquealgerie.referential.repositories.geographic.CommuneRepository;
 import dz.banquealgerie.referential.repositories.geographic.PaysRepository;
 import dz.banquealgerie.referential.repositories.geographic.WilayaRepository;
 import dz.banquealgerie.referential.service.GeographicService;
@@ -25,13 +29,15 @@ public class GeographicServiceImpl implements GeographicService {
 
     private final PaysRepository paysRepository;
     private final WilayaRepository wilayaRepository;
+    private final CommuneRepository communeRepository;
 
     private final GeographicMapper geographicMapper;
 
     public GeographicServiceImpl(PaysRepository paysRepository, WilayaRepository wilayaRepository,
-            GeographicMapper geographicMapper) {
+            CommuneRepository communeRepository, GeographicMapper geographicMapper) {
         this.paysRepository = paysRepository;
         this.wilayaRepository = wilayaRepository;
+        this.communeRepository = communeRepository;
         this.geographicMapper = geographicMapper;
     }
 
@@ -303,6 +309,89 @@ public class GeographicServiceImpl implements GeographicService {
             // entites to dto
             Page<WilayaDto> wilayaDtoList = geographicMapper.toWilayaDtoList(wilayaList);
             return wilayaDtoList;
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    // commune methods
+    @Override
+    public void createCommune(String code, CommuneDto commune, UserEntity currentUser) {
+        try {
+            WilayaEntity existingWilaya = wilayaRepository.findWilayaByCode(code);
+            if (existingWilaya == null) {
+                throw new RuntimeException("Wilaya with code " + code + " does not exist");
+            }
+
+            CommuneEntity existingCommune = communeRepository.findById(commune.getCode()).orElse(null);
+            if (existingCommune != null) {
+                throw new RuntimeException("Commune with code " + commune.getCode() + " already exists");
+            }
+
+            CommuneEntity newCommune = geographicMapper.toCommuneEntity(commune);
+            newCommune.setWilaya(existingWilaya);
+            newCommune.setCreatedAt(java.time.LocalDateTime.now());
+            newCommune.setCreatedBy(currentUser.getUsername());
+
+            communeRepository.save(newCommune);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    // get communes by wilaya code with pagination
+    @Override
+    public Page<CommuneDto> getCommunesByWilayaCode(String wilayaCode, Pageable pageable) {
+        try {
+            Page<CommuneEntity> communeList = communeRepository.findByWilayaCode(wilayaCode, pageable);
+            return geographicMapper.toCommuneDtoList(communeList);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    // update commune
+    @Override
+    public CommuneDto updateCommune(String code, String communeCode, CommuneUpdateDto commune, UserEntity currentUser) {
+        try {
+            WilayaEntity existingWilaya = wilayaRepository.findWilayaByCode(code);
+            if (existingWilaya == null) {
+                throw new RuntimeException("Wilaya with code " + code + " does not exist");
+            }
+
+            CommuneEntity existingCommune = communeRepository.findById(communeCode).orElse(null);
+            if (existingCommune == null) {
+                throw new RuntimeException("Commune with code " + communeCode + " does not exist");
+            }
+
+            existingCommune.setLibelle(
+                    commune.getLibelle() != null ? commune.getLibelle() : existingCommune.getLibelle());
+            existingCommune.setLibelleAr(
+                    commune.getLibelleAr() != null ? commune.getLibelleAr() : existingCommune.getLibelleAr());
+            existingCommune.setUpdatedAt(java.time.LocalDateTime.now());
+            existingCommune.setUpdatedBy(currentUser.getUsername());
+
+            communeRepository.save(existingCommune);
+            return geographicMapper.toCommuneDto(existingCommune);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    // change commune status
+    @Override
+    public void changeCommuneStatus(String communeCode, UserEntity currentUser) {
+        try {
+            CommuneEntity existingCommune = communeRepository.findById(communeCode).orElse(null);
+            if (existingCommune == null) {
+                throw new RuntimeException("Commune with code " + communeCode + " does not exist");
+            }
+
+            existingCommune.setIsActive(!existingCommune.getIsActive());
+            existingCommune.setUpdatedAt(java.time.LocalDateTime.now());
+            existingCommune.setUpdatedBy(currentUser.getUsername());
+
+            communeRepository.save(existingCommune);
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage());
         }

@@ -3,6 +3,8 @@ package dz.banquealgerie.referential.service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneDto;
+import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneUpdateDto;
 import dz.banquealgerie.referential.domain.dto.geographic.pays.PaysDto;
 import dz.banquealgerie.referential.domain.dto.geographic.pays.PaysUpdateDto;
 import dz.banquealgerie.referential.domain.dto.geographic.wilaya.WilayaDto;
@@ -37,4 +39,14 @@ public interface GeographicService {
     void changeWilayaStatus(String code, UserEntity currentUser);
 
     Page<WilayaDto> searchWilayas(String searchTerm, Pageable pageable);
+
+    // commune methods
+    void createCommune(String code, CommuneDto commune, UserEntity currentUser);
+
+    Page<CommuneDto> getCommunesByWilayaCode(String wilayaCode, Pageable pageable);
+
+    CommuneDto updateCommune(String code,String communeCode, CommuneUpdateDto commune, UserEntity currentUser);
+
+    void changeCommuneStatus(String communeCode, UserEntity currentUser);
+
 }

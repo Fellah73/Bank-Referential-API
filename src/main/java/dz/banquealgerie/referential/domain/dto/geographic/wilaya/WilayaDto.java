@@ -14,7 +14,7 @@ public class WilayaDto {
     @Pattern(regexp = "^[0-9]{2}$", message = "Le code wilaya doit contenir exactement 2 chiffres")
     private String code;
 
-    @Pattern(regexp = "^[a-zA-Z]{4,100}$", message = "La libellé doit contenir entre 4 et 100 lettres")
+    @Pattern(regexp = "^[a-zA-Z\\s]{4,100}$", message = "La libellé doit contenir entre 4 et 100 lettres")
     private String libelle;
 
     @Pattern(regexp = "^[\\p{IsArabic}\\s]{4,100}$", message = "Le libellé doit contenir entre 4 et 100 lettres arabes")
