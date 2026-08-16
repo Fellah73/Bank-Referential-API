@@ -1,4 +1,4 @@
-package dz.banquealgerie.referential.domain.dto.geographic;
+package dz.banquealgerie.referential.domain.dto.geographic.pays;
 
 import org.jspecify.annotations.Nullable;
 

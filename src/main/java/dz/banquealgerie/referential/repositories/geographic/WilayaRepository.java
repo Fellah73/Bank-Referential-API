@@ -7,5 +7,5 @@ import dz.banquealgerie.referential.domain.entities.geographic.WilayaEntity;
 
 @Repository
 public interface WilayaRepository extends JpaRepository<WilayaEntity, String> {
-    // later
+    WilayaEntity findWilayaByCode(String code);
 }

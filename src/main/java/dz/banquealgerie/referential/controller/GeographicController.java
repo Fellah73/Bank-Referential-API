@@ -17,10 +17,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import dz.banquealgerie.referential.domain.dto.ApiResponse;
-import dz.banquealgerie.referential.domain.dto.geographic.PaysDto;
-import dz.banquealgerie.referential.domain.dto.geographic.PaysUpdateDto;
+import dz.banquealgerie.referential.domain.dto.geographic.pays.PaysDto;
+import dz.banquealgerie.referential.domain.dto.geographic.pays.PaysUpdateDto;
+import dz.banquealgerie.referential.domain.dto.geographic.wilaya.WilayaDto;
+import dz.banquealgerie.referential.domain.dto.geographic.wilaya.WilayaUpdateDto;
 import dz.banquealgerie.referential.domain.entities.UserEntity;
-import dz.banquealgerie.referential.mappers.GeographicMapper;
 import dz.banquealgerie.referential.service.GeographicService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
@@ -32,7 +33,6 @@ import lombok.RequiredArgsConstructor;
 public class GeographicController {
 
     private final GeographicService geographicService;
-    private final GeographicMapper geographicMapper;
 
     // pays routes
 
@@ -174,6 +174,149 @@ public class GeographicController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<Page<PaysDto>>builder()
                     .success(false)
                     .message("Failed to retrieve pays list: " + e.getMessage())
+                    .statusCode(500)
+                    .build());
+        }
+    }
+
+    // wilaya routes
+    @PostMapping("/wilaya")
+    public ResponseEntity<ApiResponse<WilayaDto>> createWilaya(
+            @Valid @RequestBody WilayaDto wilayaToCreateDTO,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        try {
+
+            // created wilaya
+            geographicService.createWilaya(wilayaToCreateDTO, currentUser);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.<WilayaDto>builder()
+                    .success(true)
+                    .message("Wilaya created successfully")
+                    .statusCode(201)
+                    .data(wilayaToCreateDTO)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<WilayaDto>builder()
+                    .success(false)
+                    .message("Failed to create wilaya: " + e.getMessage())
+                    .statusCode(500)
+                    .build());
+        }
+    }
+
+    // get all wilayas with pagination
+    @GetMapping("/wilaya")
+    public ResponseEntity<ApiResponse<Page<WilayaDto>>> getAllWilayas(
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        try {
+            Page<WilayaDto> wilayaList = geographicService.getAllWilayas(pageable);
+
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<Page<WilayaDto>>builder()
+                    .success(true)
+                    .message("Wilaya list retrieved successfully")
+                    .statusCode(200)
+                    .data(wilayaList)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<Page<WilayaDto>>builder()
+                    .success(false)
+                    .message("Failed to retrieve wilaya list: " + e.getMessage())
+                    .statusCode(500)
+                    .build());
+        }
+    }
+
+    // get wilaya by code
+    @GetMapping("/wilaya/{code}")
+    public ResponseEntity<ApiResponse<WilayaDto>> getWilayaByCode(
+            @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code wilaya doit contenir exactement 2 chiffres") String code) {
+        try {
+            WilayaDto wilaya = geographicService.getWilayaByCode(code);
+
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<WilayaDto>builder()
+                    .success(true)
+                    .message("Wilaya retrieved successfully")
+                    .statusCode(200)
+                    .data(wilaya)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<WilayaDto>builder()
+                    .success(false)
+                    .message("Failed to retrieve wilaya: " + e.getMessage())
+                    .statusCode(500)
+                    .build());
+        }
+    }
+
+    // update wilaya
+    @PatchMapping("/wilaya/{code}")
+    public ResponseEntity<ApiResponse<WilayaDto>> updateWilaya(
+            @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code wilaya doit contenir exactement 2 chiffres") String code,
+            @Valid @RequestBody WilayaUpdateDto wilayaToUpdateDTO,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        try {
+            // updated wilaya
+            WilayaDto updatedWilaya = geographicService.updateWilaya(code, wilayaToUpdateDTO, currentUser);
+
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<WilayaDto>builder()
+                    .success(true)
+                    .message("Wilaya updated successfully")
+                    .statusCode(200)
+                    .data(updatedWilaya)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<WilayaDto>builder()
+                    .success(false)
+                    .message("Failed to update wilaya: " + e.getMessage())
+                    .statusCode(500)
+                    .build());
+        }
+    }
+
+    // change wilaya status
+    @PatchMapping("/wilaya/{code}/status")
+    public ResponseEntity<ApiResponse<Void>> changeWilayaStatus(
+            @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code wilaya doit contenir exactement 2 chiffres") String code,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        try {
+            // change wilaya status
+            geographicService.changeWilayaStatus(code, currentUser);
+
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<Void>builder()
+                    .success(true)
+                    .message("Wilaya status changed successfully")
+                    .statusCode(200)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<Void>builder()
+                    .success(false)
+                    .message("Failed to change wilaya status: " + e.getMessage())
+                    .statusCode(500)
+                    .build());
+        }
+    }
+
+    // search wilayas by abreviation or libelle
+    @GetMapping("/wilaya/search")
+    public ResponseEntity<ApiResponse<Page<WilayaDto>>> searchWilayas(
+            @RequestParam(required = false) @Pattern(regexp = "^([a-zA-Z]+|[\\p{IsArabic}\\s]+)$", message = "Le terme de recherche ne peut contenir que des lettres et des chiffres") String searchTerm,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        try {
+            Page<WilayaDto> wilayaList = geographicService.searchWilayas(searchTerm, pageable);
+
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<Page<WilayaDto>>builder()
+                    .success(true)
+                    .message("Wilaya list retrieved successfully")
+                    .statusCode(200)
+                    .data(wilayaList)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<Page<WilayaDto>>builder()
+                    .success(false)
+                    .message("Failed to retrieve wilaya list: " + e.getMessage())
                     .statusCode(500)
                     .build());
         }

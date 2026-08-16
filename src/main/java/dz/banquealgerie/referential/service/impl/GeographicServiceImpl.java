@@ -8,22 +8,30 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.util.Streamable;
 import org.springframework.stereotype.Service;
 
-import dz.banquealgerie.referential.domain.dto.geographic.PaysDto;
-import dz.banquealgerie.referential.domain.dto.geographic.PaysUpdateDto;
+import dz.banquealgerie.referential.domain.dto.geographic.pays.PaysDto;
+import dz.banquealgerie.referential.domain.dto.geographic.pays.PaysUpdateDto;
+import dz.banquealgerie.referential.domain.dto.geographic.wilaya.WilayaDto;
+import dz.banquealgerie.referential.domain.dto.geographic.wilaya.WilayaUpdateDto;
 import dz.banquealgerie.referential.domain.entities.UserEntity;
 import dz.banquealgerie.referential.domain.entities.geographic.PaysEntity;
+import dz.banquealgerie.referential.domain.entities.geographic.WilayaEntity;
 import dz.banquealgerie.referential.mappers.GeographicMapper;
 import dz.banquealgerie.referential.repositories.geographic.PaysRepository;
+import dz.banquealgerie.referential.repositories.geographic.WilayaRepository;
 import dz.banquealgerie.referential.service.GeographicService;
 
 @Service
 public class GeographicServiceImpl implements GeographicService {
 
     private final PaysRepository paysRepository;
+    private final WilayaRepository wilayaRepository;
+
     private final GeographicMapper geographicMapper;
 
-    public GeographicServiceImpl(PaysRepository paysRepository, GeographicMapper geographicMapper) {
+    public GeographicServiceImpl(PaysRepository paysRepository, WilayaRepository wilayaRepository,
+            GeographicMapper geographicMapper) {
         this.paysRepository = paysRepository;
+        this.wilayaRepository = wilayaRepository;
         this.geographicMapper = geographicMapper;
     }
 
@@ -32,7 +40,7 @@ public class GeographicServiceImpl implements GeographicService {
     public PaysEntity createPays(PaysDto paysDto, UserEntity currentUser) {
 
         try {
-            
+
             // convert dto to entity
             PaysEntity pays = geographicMapper.toPaysEntity(paysDto);
 
@@ -166,4 +174,138 @@ public class GeographicServiceImpl implements GeographicService {
             throw new RuntimeException(e.getMessage());
         }
     }
+
+    // wilaya methods
+
+    // create wilaya
+    @Override
+    public WilayaEntity createWilaya(WilayaDto wilaya, UserEntity currentUser) {
+        try {
+
+            // convert dto to entity
+            WilayaEntity wilayaEntity = geographicMapper.toWilayaEntity(wilaya);
+
+            WilayaEntity existingWilaya = wilayaRepository.findWilayaByCode(wilayaEntity.getCode());
+            if (existingWilaya != null) {
+                throw new RuntimeException("Wilaya with code " + wilayaEntity.getCode() + " already exists");
+            }
+
+            WilayaEntity wilayaToSave = WilayaEntity.builder()
+                    .code(wilayaEntity.getCode())
+                    .libelle(wilayaEntity.getLibelle())
+                    .libelleAr(wilayaEntity.getLibelleAr())
+                    .isActive(true)
+                    .createdAt(java.time.LocalDateTime.now())
+                    .createdBy(currentUser.getUsername())
+                    .build();
+
+            // saving the new wilaya
+            wilayaRepository.save(wilayaToSave);
+
+            return wilayaToSave;
+
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    // get all wilayas with pagination
+    @Override
+    public Page<WilayaDto> getAllWilayas(Pageable pageable) {
+        try {
+            Page<WilayaEntity> wilayaList = wilayaRepository.findAll(pageable);
+            Page<WilayaDto> wilayaDtoList = geographicMapper.toWilayaDtoList(wilayaList);
+            return wilayaDtoList;
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    // get wilaya by code
+    @Override
+    public WilayaDto getWilayaByCode(String code) {
+        try {
+            WilayaEntity existingWilaya = wilayaRepository.findWilayaByCode(code);
+            if (existingWilaya == null) {
+                throw new RuntimeException("Wilaya with code " + code + " does not exist");
+            }
+
+            return geographicMapper.toWilayaDto(existingWilaya);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    // update wilaya
+    @Override
+    public WilayaDto updateWilaya(String code, WilayaUpdateDto wilaya, UserEntity currentUser) {
+        try {
+            WilayaEntity existingWilaya = wilayaRepository.findWilayaByCode(code);
+            if (existingWilaya == null) {
+                throw new RuntimeException("Wilaya with code " + code + " does not exist");
+            }
+
+            existingWilaya.setLibelle(wilaya.getLibelle() != null ? wilaya.getLibelle() : existingWilaya.getLibelle());
+            existingWilaya.setLibelleAr(
+                    wilaya.getLibelleAr() != null ? wilaya.getLibelleAr() : existingWilaya.getLibelleAr());
+            existingWilaya.setUpdatedAt(java.time.LocalDateTime.now());
+            existingWilaya.setUpdatedBy(currentUser.getUsername());
+
+            wilayaRepository.save(existingWilaya);
+            return geographicMapper.toWilayaDto(existingWilaya);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    // change wilaya status
+    @Override
+    public void changeWilayaStatus(String code, UserEntity currentUser) {
+        try {
+            WilayaEntity existingWilaya = wilayaRepository.findWilayaByCode(code);
+            if (existingWilaya == null) {
+                throw new RuntimeException("Wilaya with code " + code + " does not exist");
+            }
+
+            existingWilaya.setIsActive(!existingWilaya.getIsActive());
+            existingWilaya.setUpdatedAt(java.time.LocalDateTime.now());
+            existingWilaya.setUpdatedBy(currentUser.getUsername());
+
+            wilayaRepository.save(existingWilaya);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    // search wilayas by abreviation or libelle
+    @Override
+    public Page<WilayaDto> searchWilayas(String searchTerm, Pageable pageable) {
+        try {
+            Page<WilayaEntity> wilayaList = wilayaRepository.findAll(pageable);
+
+            Streamable<WilayaEntity> streamableWilayaList = Streamable.of(wilayaList.getContent());
+
+            // search by abreviation or libelle
+            if (searchTerm != null && !searchTerm.isEmpty()) {
+                streamableWilayaList = streamableWilayaList
+                        .filter(wilaya -> wilaya.getLibelle().toLowerCase().contains(searchTerm.toLowerCase())
+                                || wilaya.getLibelleAr().toLowerCase().contains(searchTerm.toLowerCase()));
+            }
+            if (streamableWilayaList.isEmpty()) {
+                throw new RuntimeException("No wilayas found for the given search criteria");
+            }
+
+            // streamble to page
+            wilayaList = streamableWilayaList.toList().stream()
+                    .collect(Collectors.collectingAndThen(Collectors.toList(),
+                            list -> new PageImpl<>(list, pageable, list.size())));
+
+            // entites to dto
+            Page<WilayaDto> wilayaDtoList = geographicMapper.toWilayaDtoList(wilayaList);
+            return wilayaDtoList;
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
 }
