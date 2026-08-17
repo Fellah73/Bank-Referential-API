@@ -32,6 +32,7 @@ import dz.banquealgerie.referential.repositories.geographic.CommuneRepository;
 import dz.banquealgerie.referential.repositories.geographic.PaysRepository;
 import dz.banquealgerie.referential.repositories.geographic.WilayaRepository;
 import dz.banquealgerie.referential.service.GeographicService;
+import dz.banquealgerie.referential.utils.excel.CommuneExcelParser;
 import dz.banquealgerie.referential.utils.excel.ExcelUtils;
 import dz.banquealgerie.referential.utils.excel.PaysExcelParser;
 import dz.banquealgerie.referential.utils.excel.WilayaExcelParser;
@@ -434,6 +435,10 @@ public class GeographicServiceImpl implements GeographicService {
         }
 
         List<ImportErrorDto> errors = new ArrayList<>();
+
+        Set<String> processedCodes = new HashSet<>();
+        Set<String> processedLibelles = new HashSet<>();
+        Set<String> processedAbreviation = new HashSet<>();
         int successCount = 0;
         int rowNumber = 2;
 
@@ -448,6 +453,32 @@ public class GeographicServiceImpl implements GeographicService {
             if (!violations.isEmpty()) {
                 String errorMsg = violations.iterator().next().getMessage();
                 errors.add(new ImportErrorDto(rowNumber, dto.getCode(), errorMsg));
+                rowNumber++;
+                continue;
+            }
+
+            // doublons de codes
+            if (processedCodes.contains(dto.getCode())) {
+                errors.add(
+                        new ImportErrorDto(rowNumber, dto.getCode(), "Code en double dans le même fichier Excel"));
+                rowNumber++;
+                continue;
+            }
+
+            // doublons de libelle
+            if (processedLibelles.contains(dto.getLibelle())) {
+                errors.add(
+                        new ImportErrorDto(rowNumber, dto.getCode(),
+                                "Libellé en double dans le même fichier Excel"));
+                rowNumber++;
+                continue;
+            }
+
+            // doublons d'abreviation
+            if (processedAbreviation.contains(dto.getAbreviation())) {
+                errors.add(
+                        new ImportErrorDto(rowNumber, dto.getCode(),
+                                "abréviation en double dans le même fichier Excel"));
                 rowNumber++;
                 continue;
             }
@@ -482,6 +513,9 @@ public class GeographicServiceImpl implements GeographicService {
                 paysRepository.save(newEntity);
             }
 
+            processedCodes.add(dto.getCode());
+            processedLibelles.add(dto.getLibelle());
+            processedAbreviation.add(dto.getAbreviation());
             successCount++;
             rowNumber++;
         }
@@ -603,5 +637,100 @@ public class GeographicServiceImpl implements GeographicService {
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage());
         }
+    }
+
+    // commune bulk-import
+    @Override
+    @Transactional
+    public BulkImportResponseDto importCommunesBulk(MultipartFile file, UserEntity currentUser,
+            boolean updateIfExists) {
+
+        if (!ExcelUtils.hasExcelFormat(file)) {
+            throw new IllegalArgumentException("Le fichier doit être au format Excel (.xlsx)");
+        }
+
+        List<CommuneDto> communeDtos;
+        try {
+            communeDtos = CommuneExcelParser.parse(file.getInputStream());
+        } catch (IOException e) {
+            throw new RuntimeException("Erreur lors de la lecture du fichier Excel : " + e.getMessage());
+        }
+
+        List<ImportErrorDto> errors = new ArrayList<>();
+        Set<String> processedCodes = new HashSet<>();
+
+        int successCount = 0;
+        int rowNumber = 2;
+        String username = (currentUser != null) ? currentUser.getUsername() : "SYSTEM";
+
+        for (CommuneDto dto : communeDtos) {
+
+            Set<ConstraintViolation<CommuneDto>> violations = validator.validate(dto);
+            if (!violations.isEmpty()) {
+                String errorMsg = violations.iterator().next().getMessage();
+                errors.add(new ImportErrorDto(rowNumber, dto.getCode(), errorMsg));
+                rowNumber++;
+                continue;
+            }
+
+            if (processedCodes.contains(dto.getCode())) {
+                errors.add(new ImportErrorDto(rowNumber, dto.getCode(), "Code en double dans le même fichier Excel"));
+                rowNumber++;
+                continue;
+            }
+
+            Optional<WilayaEntity> wilayaOpt = wilayaRepository.findById(dto.getWilayaCode());
+            if (wilayaOpt.isEmpty()) {
+                errors.add(new ImportErrorDto(rowNumber, dto.getCode(),
+                        "La wilaya parente avec le code [" + dto.getWilayaCode() + "] n'existe pas en BDD"));
+                rowNumber++;
+                continue;
+            }
+
+            WilayaEntity wilayaEntity = wilayaOpt.get();
+
+            Optional<CommuneEntity> existingCommuneOpt = communeRepository.findById(dto.getCode());
+
+            if (existingCommuneOpt.isPresent()) {
+                if (!updateIfExists) {
+                    errors.add(
+                            new ImportErrorDto(rowNumber, dto.getCode(), "La commune avec ce code existe déjà en BDD"));
+                    rowNumber++;
+                    continue;
+                }
+
+                CommuneEntity entityToUpdate = existingCommuneOpt.get();
+                entityToUpdate.setLibelle(dto.getLibelle());
+                entityToUpdate.setLibelleAr(dto.getLibelleAr());
+                entityToUpdate.setWilaya(wilayaEntity);
+                entityToUpdate.setUpdatedBy(username);
+                entityToUpdate.setUpdatedAt(java.time.LocalDateTime.now());
+
+                communeRepository.save(entityToUpdate);
+            } else {
+                CommuneEntity newEntity = CommuneEntity.builder()
+                        .code(dto.getCode())
+                        .libelle(dto.getLibelle())
+                        .libelleAr(dto.getLibelleAr())
+                        .wilaya(wilayaEntity)
+                        .isActive(true)
+                        .createdBy(username)
+                        .createdAt(java.time.LocalDateTime.now())
+                        .build();
+
+                communeRepository.save(newEntity);
+            }
+
+            processedCodes.add(dto.getCode());
+            successCount++;
+            rowNumber++;
+        }
+
+        return BulkImportResponseDto.builder()
+                .totalRows(communeDtos.size())
+                .successCount(successCount)
+                .errorCount(errors.size())
+                .errors(errors)
+                .build();
     }
 }

@@ -483,4 +483,31 @@ public class GeographicController {
                     .build());
         }
     }
+
+    // communes bulk-import
+    @PostMapping(value = "/commune/bulk-import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<BulkImportResponseDto>> importCommunesBulk(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "updateIfExists", defaultValue = "false") boolean updateIfExists,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        try {
+            BulkImportResponseDto response = geographicService.importCommunesBulk(file, currentUser, updateIfExists);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.<BulkImportResponseDto>builder()
+                    .success(true)
+                    .message("Importation des communes exécutée")
+                    .statusCode(HttpStatus.CREATED.value())
+                    .data(response)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.<BulkImportResponseDto>builder()
+                            .success(false)
+                            .message("Failed to import communes: " + e.getMessage())
+                            .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                            .build());
+        }
+    }
+
 }

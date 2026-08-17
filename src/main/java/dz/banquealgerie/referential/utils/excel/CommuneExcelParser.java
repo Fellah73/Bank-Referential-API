@@ -36,6 +36,7 @@ public class CommuneExcelParser {
                 commune.setCode(ExcelUtils.getCellValueAsString(currentRow.getCell(0)));
                 commune.setLibelle(ExcelUtils.getCellValueAsString(currentRow.getCell(1)));
                 commune.setLibelleAr(ExcelUtils.getCellValueAsString(currentRow.getCell(2)));
+                commune.setWilayaCode(ExcelUtils.getCellValueAsString(currentRow.getCell(3)));
 
                 communes.add(commune);
             }

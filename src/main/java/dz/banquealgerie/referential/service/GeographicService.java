@@ -55,4 +55,6 @@ public interface GeographicService {
 
     void changeCommuneStatus(String communeCode, UserEntity currentUser);
 
+    BulkImportResponseDto importCommunesBulk(MultipartFile file, UserEntity currentUser, boolean updateIfExists);
+
 }

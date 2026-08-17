@@ -10,7 +10,7 @@ import lombok.Setter;
 @Setter
 public class CommuneUpdateDto {
     
-    @Pattern(regexp = "^[a-zA-Z\\s]{4,100}$", message = "La libellé doit contenir entre 4 et 100 lettres")
+    @Pattern(regexp = "^[\\p{L}\\s'-]{4,100}$", message = "La libellé doit contenir entre 4 et 100 lettres")
     private String libelle;
 
     @Pattern(regexp = "^[\\p{IsArabic}\\s]{4,100}$", message = "Le libellé doit contenir entre 4 et 100 lettres arabes")
