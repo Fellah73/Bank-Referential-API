@@ -15,10 +15,10 @@ public class PaysDto {
     @Pattern(regexp = "^[0-9]{3}$", message = "Le code pays doit contenir exactement 3 chiffres")
     private String code;
 
-    @Pattern(regexp = "^[A-Z]{2}$", message = "L'abréviation doit contenir exactement 2 lettres majuscules")
-    private String abreviation;
-
     @Size(min = 2, max = 100, message = "Le libellé doit faire entre 2 et 100 caractères")
     private String libelle;
+
+    @Pattern(regexp = "^[A-Z]{2}$", message = "L'abréviation doit contenir exactement 2 lettres majuscules")
+    private String abreviation;
 
 }

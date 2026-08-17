@@ -5,6 +5,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
@@ -16,8 +17,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import dz.banquealgerie.referential.domain.dto.ApiResponse;
+import dz.banquealgerie.referential.domain.dto.geographic.BulkImportResponseDto;
 import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneDto;
 import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneUpdateDto;
 import dz.banquealgerie.referential.domain.dto.geographic.pays.PaysDto;
@@ -182,6 +185,32 @@ public class GeographicController {
         }
     }
 
+    // bulk import countries
+    @PostMapping(value = "/pays/bulk-import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<BulkImportResponseDto>> importPaysBulk(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "updateIfExists", defaultValue = "false") boolean updateIfExists,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        try {
+            BulkImportResponseDto response = geographicService.importPaysBulk(file, currentUser, updateIfExists);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.<BulkImportResponseDto>builder()
+                    .success(true)
+                    .message("Importation des pays exécutée")
+                    .statusCode(HttpStatus.CREATED.value())
+                    .data(response)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.<BulkImportResponseDto>builder()
+                            .success(false)
+                            .message("Failed to import pays: " + e.getMessage())
+                            .statusCode(500)
+                            .build());
+        }
+    }
+
     // wilaya routes
     @PostMapping("/wilaya")
     public ResponseEntity<ApiResponse<WilayaDto>> createWilaya(
@@ -322,6 +351,34 @@ public class GeographicController {
                     .message("Failed to retrieve wilaya list: " + e.getMessage())
                     .statusCode(500)
                     .build());
+        }
+    }
+
+    // import wilayas bulk
+    @PostMapping(value = "/wilaya/bulk-import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<BulkImportResponseDto>> importWilayasBulk(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "updateIfExists", defaultValue = "false") boolean updateIfExists,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        try {
+
+            BulkImportResponseDto response = geographicService.importWilayasBulk(file, currentUser, updateIfExists);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.<BulkImportResponseDto>builder()
+                    .success(true)
+                    .message("Importation des wilayas exécutée")
+                    .statusCode(HttpStatus.CREATED.value())
+                    .data(response)
+                    .build());
+        } catch (Exception e) {
+
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.<BulkImportResponseDto>builder()
+                            .success(false)
+                            .message("Failed to import wilayas: " + e.getMessage())
+                            .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                            .build());
         }
     }
 

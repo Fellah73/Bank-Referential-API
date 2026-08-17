@@ -2,7 +2,9 @@ package dz.banquealgerie.referential.service;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
+import dz.banquealgerie.referential.domain.dto.geographic.BulkImportResponseDto;
 import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneDto;
 import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneUpdateDto;
 import dz.banquealgerie.referential.domain.dto.geographic.pays.PaysDto;
@@ -27,6 +29,8 @@ public interface GeographicService {
 
     Page<PaysDto> searchPays(String searchTerm, Pageable pageable);
 
+    BulkImportResponseDto importPaysBulk(MultipartFile file, UserEntity currentUser, boolean updateIfExists);
+
     // wilaya methods
     WilayaEntity createWilaya(WilayaDto wilaya, UserEntity currentUser);
 
@@ -40,12 +44,14 @@ public interface GeographicService {
 
     Page<WilayaDto> searchWilayas(String searchTerm, Pageable pageable);
 
+    BulkImportResponseDto importWilayasBulk(MultipartFile file, UserEntity currentUser, boolean updateIfExists);
+
     // commune methods
     void createCommune(String code, CommuneDto commune, UserEntity currentUser);
 
     Page<CommuneDto> getCommunesByWilayaCode(String wilayaCode, Pageable pageable);
 
-    CommuneDto updateCommune(String code,String communeCode, CommuneUpdateDto commune, UserEntity currentUser);
+    CommuneDto updateCommune(String code, String communeCode, CommuneUpdateDto commune, UserEntity currentUser);
 
     void changeCommuneStatus(String communeCode, UserEntity currentUser);
 

@@ -1,5 +1,11 @@
 package dz.banquealgerie.referential.service.impl;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
@@ -7,7 +13,10 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.util.Streamable;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import dz.banquealgerie.referential.domain.dto.geographic.BulkImportResponseDto;
+import dz.banquealgerie.referential.domain.dto.geographic.ImportErrorDto;
 import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneDto;
 import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneUpdateDto;
 import dz.banquealgerie.referential.domain.dto.geographic.pays.PaysDto;
@@ -23,6 +32,12 @@ import dz.banquealgerie.referential.repositories.geographic.CommuneRepository;
 import dz.banquealgerie.referential.repositories.geographic.PaysRepository;
 import dz.banquealgerie.referential.repositories.geographic.WilayaRepository;
 import dz.banquealgerie.referential.service.GeographicService;
+import dz.banquealgerie.referential.utils.excel.ExcelUtils;
+import dz.banquealgerie.referential.utils.excel.PaysExcelParser;
+import dz.banquealgerie.referential.utils.excel.WilayaExcelParser;
+import jakarta.transaction.Transactional;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 
 @Service
 public class GeographicServiceImpl implements GeographicService {
@@ -33,12 +48,15 @@ public class GeographicServiceImpl implements GeographicService {
 
     private final GeographicMapper geographicMapper;
 
+    private final Validator validator;
+
     public GeographicServiceImpl(PaysRepository paysRepository, WilayaRepository wilayaRepository,
-            CommuneRepository communeRepository, GeographicMapper geographicMapper) {
+            CommuneRepository communeRepository, GeographicMapper geographicMapper, Validator validator) {
         this.paysRepository = paysRepository;
         this.wilayaRepository = wilayaRepository;
         this.communeRepository = communeRepository;
         this.geographicMapper = geographicMapper;
+        this.validator = validator;
     }
 
     // create country
@@ -397,4 +415,193 @@ public class GeographicServiceImpl implements GeographicService {
         }
     }
 
+    // bulk import countries
+
+    // pays bulk-import
+    @Override
+    @Transactional
+    public BulkImportResponseDto importPaysBulk(MultipartFile file, UserEntity currentUser, boolean updateIfExists) {
+
+        if (!ExcelUtils.hasExcelFormat(file)) {
+            throw new IllegalArgumentException("Le fichier doit être au format Excel (.xlsx)");
+        }
+
+        List<PaysDto> paysDtos;
+        try {
+            paysDtos = PaysExcelParser.parse(file.getInputStream());
+        } catch (IOException e) {
+            throw new RuntimeException("Erreur lors de la lecture du fichier Excel : " + e.getMessage());
+        }
+
+        List<ImportErrorDto> errors = new ArrayList<>();
+        int successCount = 0;
+        int rowNumber = 2;
+
+        String username = (currentUser != null) ? currentUser.getUsername() : "SYSTEM";
+
+        for (PaysDto dto : paysDtos) {
+
+            System.out.println("Processing row " + rowNumber + ": " + dto);
+            System.out.println("pays " + dto.getCode() + " - " + dto.getAbreviation() + " - " + dto.getLibelle());
+
+            Set<ConstraintViolation<PaysDto>> violations = validator.validate(dto);
+            if (!violations.isEmpty()) {
+                String errorMsg = violations.iterator().next().getMessage();
+                errors.add(new ImportErrorDto(rowNumber, dto.getCode(), errorMsg));
+                rowNumber++;
+                continue;
+            }
+
+            Optional<PaysEntity> existingPaysOpt = paysRepository.findById(dto.getCode());
+
+            if (existingPaysOpt.isPresent()) {
+                if (!updateIfExists) {
+                    errors.add(new ImportErrorDto(rowNumber, dto.getCode(), "Le pays avec ce code existe déjà"));
+                    rowNumber++;
+                    continue;
+                }
+
+                // Upsert
+                PaysEntity entityToUpdate = existingPaysOpt.get();
+                entityToUpdate.setLibelle(dto.getLibelle());
+                entityToUpdate.setAbreviation(dto.getAbreviation());
+                entityToUpdate.setUpdatedBy(username);
+                entityToUpdate.setUpdatedAt(java.time.LocalDateTime.now());
+
+                paysRepository.save(entityToUpdate);
+            } else {
+                PaysEntity newEntity = PaysEntity.builder()
+                        .code(dto.getCode())
+                        .libelle(dto.getLibelle())
+                        .abreviation(dto.getAbreviation())
+                        .isActive(true)
+                        .createdBy(username)
+                        .createdAt(java.time.LocalDateTime.now())
+                        .build();
+
+                paysRepository.save(newEntity);
+            }
+
+            successCount++;
+            rowNumber++;
+        }
+
+        return BulkImportResponseDto.builder()
+                .totalRows(paysDtos.size())
+                .successCount(successCount)
+                .errorCount(errors.size())
+                .errors(errors)
+                .build();
+    }
+
+    // wilaya bulk-import
+    @Override
+    @Transactional
+    public BulkImportResponseDto importWilayasBulk(MultipartFile file, UserEntity currentUser, boolean updateIfExists) {
+
+        if (!ExcelUtils.hasExcelFormat(file)) {
+            throw new IllegalArgumentException("Le fichier doit être au format Excel (.xlsx)");
+        }
+
+        List<WilayaDto> wilayaDtos;
+        try {
+            wilayaDtos = WilayaExcelParser.parse(file.getInputStream());
+        } catch (IOException e) {
+            throw new RuntimeException("Erreur lors de la lecture du fichier Excel : " + e.getMessage());
+        }
+
+        try {
+
+            List<ImportErrorDto> errors = new ArrayList<>();
+            Set<String> processedCodes = new HashSet<>();
+            Set<String> processedLibelles = new HashSet<>();
+            Set<String> processedArabicLibelles = new HashSet<>();
+
+            int successCount = 0;
+            int rowNumber = 2;
+            String username = (currentUser != null) ? currentUser.getUsername() : "SYSTEM";
+
+            for (WilayaDto dto : wilayaDtos) {
+
+                // A. Validation syntaxique
+                Set<ConstraintViolation<WilayaDto>> violations = validator.validate(dto);
+                if (!violations.isEmpty()) {
+                    String errorMsg = violations.iterator().next().getMessage();
+                    errors.add(new ImportErrorDto(rowNumber, dto.getCode(), errorMsg));
+                    rowNumber++;
+                    continue;
+                }
+
+                // doublons de codes
+                if (processedCodes.contains(dto.getCode())) {
+                    errors.add(
+                            new ImportErrorDto(rowNumber, dto.getCode(), "Code en double dans le même fichier Excel"));
+                    rowNumber++;
+                    continue;
+                }
+
+                // doublons de libelle
+                if (processedLibelles.contains(dto.getLibelle())) {
+                    errors.add(
+                            new ImportErrorDto(rowNumber, dto.getCode(),
+                                    "Libellé en double dans le même fichier Excel"));
+                    rowNumber++;
+                    continue;
+                }
+
+                // doublons de libelle arabe
+                if (processedArabicLibelles.contains(dto.getLibelleAr())) {
+                    errors.add(
+                            new ImportErrorDto(rowNumber, dto.getCode(),
+                                    "Libellé arabe en double dans le même fichier Excel"));
+                    rowNumber++;
+                    continue;
+                }
+
+                Optional<WilayaEntity> existingWilayaOpt = wilayaRepository.findById(dto.getCode());
+
+                if (existingWilayaOpt.isPresent()) {
+                    if (!updateIfExists) {
+                        errors.add(new ImportErrorDto(rowNumber, dto.getCode(), "La wilaya avec ce code existe déjà"));
+                        rowNumber++;
+                        continue;
+                    }
+
+                    WilayaEntity entityToUpdate = existingWilayaOpt.get();
+                    entityToUpdate.setLibelle(dto.getLibelle());
+                    entityToUpdate.setLibelleAr(dto.getLibelleAr());
+                    entityToUpdate.setUpdatedBy(username);
+                    entityToUpdate.setUpdatedAt(java.time.LocalDateTime.now());
+
+                    wilayaRepository.save(entityToUpdate);
+                } else {
+                    WilayaEntity newEntity = WilayaEntity.builder()
+                            .code(dto.getCode())
+                            .libelle(dto.getLibelle())
+                            .libelleAr(dto.getLibelleAr())
+                            .isActive(true)
+                            .createdBy(username)
+                            .createdAt(java.time.LocalDateTime.now())
+                            .build();
+
+                    wilayaRepository.save(newEntity);
+                }
+
+                processedCodes.add(dto.getCode());
+                processedLibelles.add(dto.getLibelle());
+                processedArabicLibelles.add(dto.getLibelleAr());
+                successCount++;
+                rowNumber++;
+            }
+
+            return BulkImportResponseDto.builder()
+                    .totalRows(wilayaDtos.size())
+                    .successCount(successCount)
+                    .errorCount(errors.size())
+                    .errors(errors)
+                    .build();
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
 }
