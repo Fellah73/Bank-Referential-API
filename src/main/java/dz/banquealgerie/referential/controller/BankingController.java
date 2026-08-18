@@ -20,13 +20,13 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import dz.banquealgerie.referential.domain.dto.ApiResponse;
+import dz.banquealgerie.referential.domain.dto.banking.accountStatus.AccountStatusDto;
+import dz.banquealgerie.referential.domain.dto.banking.accountStatus.AccountStatusUpdateDto;
 import dz.banquealgerie.referential.domain.dto.banking.agence.AgenceDto;
 import dz.banquealgerie.referential.domain.dto.banking.agence.AgenceUpdateDto;
 import dz.banquealgerie.referential.domain.dto.banking.etablissement.EtablissementDto;
 import dz.banquealgerie.referential.domain.dto.banking.etablissement.EtablissementUpdateDto;
 import dz.banquealgerie.referential.domain.dto.geographic.BulkImportResponseDto;
-import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneDto;
-import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneUpdateDto;
 import dz.banquealgerie.referential.domain.entities.UserEntity;
 import dz.banquealgerie.referential.service.BankingService;
 import jakarta.validation.Valid;
@@ -336,6 +336,106 @@ public class BankingController {
                             .message("Failed to import agences: " + e.getMessage())
                             .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
                             .build());
+        }
+    }
+
+    // status de compte routes
+
+    // create account-status
+    @PostMapping("/account-status")
+    public ResponseEntity<ApiResponse<AccountStatusDto>> createAccountStatus(
+            @Valid @RequestBody AccountStatusDto accountStatusToCreateDTO,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        try {
+
+            bankingService.createAccountStatus(accountStatusToCreateDTO, currentUser);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.<AccountStatusDto>builder()
+                    .success(true)
+                    .message("Account status created successfully")
+                    .statusCode(201)
+                    .data(accountStatusToCreateDTO)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<AccountStatusDto>builder()
+                    .success(false)
+                    .message("Failed to create account status: " + e.getMessage())
+                    .statusCode(500)
+                    .build());
+        }
+    }
+
+    // get all account statuses with pagination
+    @GetMapping("/account-status")
+    public ResponseEntity<ApiResponse<Page<AccountStatusDto>>> getAllAccountStatuses(
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        try {
+            Page<AccountStatusDto> accountStatusList = bankingService.getAllAccountStatuses(pageable);
+
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<Page<AccountStatusDto>>builder()
+                    .success(true)
+                    .message("Account status list retrieved successfully")
+                    .statusCode(200)
+                    .data(accountStatusList)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.<Page<AccountStatusDto>>builder()
+                            .success(false)
+                            .message("Failed to retrieve account status list: " + e.getMessage())
+                            .statusCode(500)
+                            .build());
+        }
+    }
+
+    // update account-status
+    @PatchMapping("/account-status/{code}")
+    public ResponseEntity<ApiResponse<AccountStatusDto>> updateAccountStatus(
+            @Validated @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code compte doit contenir exactement 2 chiffres") String code,
+            @Valid @RequestBody AccountStatusUpdateDto accountStatusToUpdateDTO,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        try {
+            AccountStatusDto updatedAccountStatus = bankingService.updateAccountStatus(code, accountStatusToUpdateDTO,
+                    currentUser);
+
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<AccountStatusDto>builder()
+                    .success(true)
+                    .message("Account status updated successfully")
+                    .statusCode(200)
+                    .data(updatedAccountStatus)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<AccountStatusDto>builder()
+                    .success(false)
+                    .message("Failed to update account status: " + e.getMessage())
+                    .statusCode(500)
+                    .build());
+        }
+    }
+
+     // change account-status status
+    @PatchMapping("/account-status/{code}/status")
+    public ResponseEntity<ApiResponse<Void>> changeAccountStatus(
+            @Validated @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code compte doit contenir exactement 2 chiffres") String code,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        try {
+            // change account status
+            bankingService.changeAccountStatus(code, currentUser);
+
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<Void>builder()
+                    .success(true)
+                    .message("Account status changed successfully")
+                    .statusCode(200)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<Void>builder()
+                    .success(false)
+                    .message("Failed to change account status: " + e.getMessage())
+                    .statusCode(500)
+                    .build());
         }
     }
 

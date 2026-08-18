@@ -4,6 +4,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
+import dz.banquealgerie.referential.domain.dto.banking.accountStatus.AccountStatusDto;
+import dz.banquealgerie.referential.domain.dto.banking.accountStatus.AccountStatusUpdateDto;
 import dz.banquealgerie.referential.domain.dto.banking.agence.AgenceDto;
 import dz.banquealgerie.referential.domain.dto.banking.agence.AgenceUpdateDto;
 import dz.banquealgerie.referential.domain.dto.banking.etablissement.EtablissementDto;
@@ -34,9 +36,20 @@ public interface BankingService {
 
     Page<AgenceDto> getAgencesByEtablissementCode(String etablissementCode, Pageable pageable);
 
-    AgenceDto updateAgence(String etablissementCode, String agenceCode, AgenceUpdateDto agenceToUpdateDTO, UserEntity currentUser);
- 
+    AgenceDto updateAgence(String etablissementCode, String agenceCode, AgenceUpdateDto agenceToUpdateDTO,
+            UserEntity currentUser);
+
     void changeAgenceStatus(String agenceCode, UserEntity currentUser);
 
     BulkImportResponseDto importAgencesBulk(MultipartFile file, UserEntity currentUser, boolean updateIfExists);
+
+    // account-status methods
+    AccountStatusDto createAccountStatus(AccountStatusDto accountStatusToCreateDTO, UserEntity currentUser);
+
+    Page<AccountStatusDto> getAllAccountStatuses(Pageable pageable);
+
+    AccountStatusDto updateAccountStatus(String code, AccountStatusUpdateDto accountStatusToUpdateDTO,
+            UserEntity currentUser);
+
+    void changeAccountStatus(String code, UserEntity currentUser);
 }

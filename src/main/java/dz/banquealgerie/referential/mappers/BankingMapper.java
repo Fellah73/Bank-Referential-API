@@ -3,13 +3,14 @@ package dz.banquealgerie.referential.mappers;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
+import dz.banquealgerie.referential.domain.dto.banking.accountStatus.AccountStatusDto;
+import dz.banquealgerie.referential.domain.dto.banking.accountStatus.AccountStatusUpdateDto;
 import dz.banquealgerie.referential.domain.dto.banking.agence.AgenceDto;
 import dz.banquealgerie.referential.domain.dto.banking.etablissement.EtablissementDto;
 import dz.banquealgerie.referential.domain.dto.banking.etablissement.EtablissementUpdateDto;
-import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneDto;
+import dz.banquealgerie.referential.domain.entities.banking.AccountStatusEntity;
 import dz.banquealgerie.referential.domain.entities.banking.AgenceEntity;
 import dz.banquealgerie.referential.domain.entities.banking.EtablissementEntity;
-import dz.banquealgerie.referential.domain.entities.geographic.CommuneEntity;
 
 @Component
 public class BankingMapper {
@@ -60,6 +61,31 @@ public class BankingMapper {
 
     public Page<AgenceDto> toAgenceDtoList(Page<AgenceEntity> entities) {
         return entities.map(this::toAgenceDto);
+    }
+
+    // acount-status methods
+    public AccountStatusEntity toAccountStatusEntity(AccountStatusDto accountStatusDto) {
+        return AccountStatusEntity.builder()
+                .code(accountStatusDto.getCode())
+                .libelle(accountStatusDto.getLibelle())
+                .build();
+    }
+
+    public AccountStatusDto toAccountStatusDto(AccountStatusEntity accountStatus) {
+        AccountStatusDto dto = new AccountStatusDto();
+        dto.setCode(accountStatus.getCode());
+        dto.setLibelle(accountStatus.getLibelle());
+        return dto;
+    }
+
+    public Page<AccountStatusDto> toAccountStatusDtoList(Page<AccountStatusEntity> entities) {
+        return entities.map(this::toAccountStatusDto);
+    }
+
+    public AccountStatusEntity toAccountStatusEntity(AccountStatusUpdateDto accountStatusDto) {
+        AccountStatusEntity existingEntity = new AccountStatusEntity();
+        existingEntity.setLibelle(accountStatusDto.getLibelle());
+        return existingEntity;
     }
 
 }

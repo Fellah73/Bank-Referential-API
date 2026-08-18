@@ -15,27 +15,29 @@ import org.springframework.data.util.Streamable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import dz.banquealgerie.referential.domain.dto.banking.accountStatus.AccountStatusDto;
+import dz.banquealgerie.referential.domain.dto.banking.accountStatus.AccountStatusUpdateDto;
 import dz.banquealgerie.referential.domain.dto.banking.agence.AgenceDto;
 import dz.banquealgerie.referential.domain.dto.banking.agence.AgenceUpdateDto;
 import dz.banquealgerie.referential.domain.dto.banking.etablissement.EtablissementDto;
 import dz.banquealgerie.referential.domain.dto.banking.etablissement.EtablissementUpdateDto;
 import dz.banquealgerie.referential.domain.dto.geographic.BulkImportResponseDto;
 import dz.banquealgerie.referential.domain.dto.geographic.ImportErrorDto;
-import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneDto;
-import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneUpdateDto;
+import dz.banquealgerie.referential.domain.dto.geographic.pays.PaysDto;
+import dz.banquealgerie.referential.domain.dto.geographic.pays.PaysUpdateDto;
 import dz.banquealgerie.referential.domain.entities.UserEntity;
+import dz.banquealgerie.referential.domain.entities.banking.AccountStatusEntity;
 import dz.banquealgerie.referential.domain.entities.banking.AgenceEntity;
 import dz.banquealgerie.referential.domain.entities.banking.EtablissementEntity;
-import dz.banquealgerie.referential.domain.entities.geographic.CommuneEntity;
-import dz.banquealgerie.referential.domain.entities.geographic.WilayaEntity;
+import dz.banquealgerie.referential.domain.entities.geographic.PaysEntity;
 import dz.banquealgerie.referential.mappers.BankingMapper;
+import dz.banquealgerie.referential.repositories.banking.AccountStatusRepository;
 import dz.banquealgerie.referential.repositories.banking.AgenceRepository;
 import dz.banquealgerie.referential.repositories.banking.EtablissementRepository;
 import dz.banquealgerie.referential.service.BankingService;
 import dz.banquealgerie.referential.utils.excel.ExcelUtils;
 import dz.banquealgerie.referential.utils.excel.banking.AgenceExcelParser;
 import dz.banquealgerie.referential.utils.excel.banking.EtablissementExcelParser;
-import dz.banquealgerie.referential.utils.excel.referentiel.CommuneExcelParser;
 import jakarta.transaction.Transactional;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -45,16 +47,19 @@ public class BankingServiceImpl implements BankingService {
 
     private final EtablissementRepository etablissementRepository;
     private final AgenceRepository agenceRepository;
+    private final AccountStatusRepository accountStatusRepository;
 
     private final BankingMapper bankingMapper;
 
     private final Validator validator;
 
     public BankingServiceImpl(EtablissementRepository etablissementRepository, AgenceRepository agenceRepository,
+            AccountStatusRepository accountStatusRepository,
             BankingMapper bankingMapper,
             Validator validator) {
         this.etablissementRepository = etablissementRepository;
         this.agenceRepository = agenceRepository;
+        this.accountStatusRepository = accountStatusRepository;
         this.bankingMapper = bankingMapper;
         this.validator = validator;
     }
@@ -450,7 +455,8 @@ public class BankingServiceImpl implements BankingService {
                 continue;
             }
 
-            Optional<EtablissementEntity> etablissementOpt = etablissementRepository.findById(dto.getEtablissementCode());
+            Optional<EtablissementEntity> etablissementOpt = etablissementRepository
+                    .findById(dto.getEtablissementCode());
             if (etablissementOpt.isEmpty()) {
                 errors.add(new ImportErrorDto(rowNumber, dto.getCode(),
                         "L'établissement parente avec le code " + dto.getEtablissementCode() + " n'existe pas en BDD"));
@@ -501,6 +507,96 @@ public class BankingServiceImpl implements BankingService {
                 .errorCount(errors.size())
                 .errors(errors)
                 .build();
+    }
+
+    // account-status methods
+
+    // create account status
+    @Override
+    public AccountStatusDto createAccountStatus(AccountStatusDto accountStatusToCreateDTO, UserEntity currentUser) {
+
+        try {
+
+            AccountStatusEntity accountStatus = bankingMapper.toAccountStatusEntity(accountStatusToCreateDTO);
+
+            Optional<AccountStatusEntity> existingAccountStatus = accountStatusRepository
+                    .findById(accountStatus.getCode());
+            if (existingAccountStatus.isPresent()) {
+                throw new RuntimeException("Account status with code " + accountStatus.getCode() + " already exists");
+            }
+
+            AccountStatusEntity accountStatusToSave = AccountStatusEntity.builder()
+                    .code(accountStatus.getCode())
+                    .libelle(accountStatus.getLibelle())
+                    .isActive(true)
+                    .createdAt(java.time.LocalDateTime.now())
+                    .createdBy(currentUser.getUsername())
+                    .build();
+
+            accountStatusRepository.save(accountStatusToSave);
+
+            return bankingMapper.toAccountStatusDto(accountStatusToSave);
+
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    // get all account-status with pagination
+    @Override
+    public Page<AccountStatusDto> getAllAccountStatuses(Pageable pageable) {
+        try {
+            Page<AccountStatusEntity> accountStatusList = accountStatusRepository.findAll(pageable);
+            Page<AccountStatusDto> accountStatusDtoList = bankingMapper.toAccountStatusDtoList(accountStatusList);
+            return accountStatusDtoList;
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    // update account-status
+    @Override
+    public AccountStatusDto updateAccountStatus(String code, AccountStatusUpdateDto accountStatusDto,
+            UserEntity currentUser) {
+        try {
+            AccountStatusEntity existingAccountStatus = accountStatusRepository.findById(code)
+                    .orElseThrow(() -> new RuntimeException("Account status with code " + code + " does not exist"));
+
+            AccountStatusEntity accountStatus = bankingMapper.toAccountStatusEntity(accountStatusDto);
+
+            existingAccountStatus.setLibelle(
+                    accountStatus.getLibelle() != null ? accountStatus.getLibelle()
+                            : existingAccountStatus.getLibelle());
+            existingAccountStatus.setUpdatedAt(java.time.LocalDateTime.now());
+            existingAccountStatus.setUpdatedBy(currentUser.getUsername());
+
+            // saving the updated account status
+            accountStatusRepository.save(existingAccountStatus);
+
+            AccountStatusDto updatedAccountStatusDto = bankingMapper.toAccountStatusDto(existingAccountStatus);
+            return updatedAccountStatusDto;
+
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    // change account-status status
+    @Override
+    public void changeAccountStatus(String code, UserEntity currentUser) {
+        try {
+            AccountStatusEntity existingAccountStatus = accountStatusRepository.findById(code)
+                    .orElseThrow(() -> new RuntimeException("Account status with code " + code + " does not exist"));
+
+            existingAccountStatus.setIsActive(!existingAccountStatus.getIsActive());
+            existingAccountStatus.setUpdatedAt(java.time.LocalDateTime.now());
+            existingAccountStatus.setUpdatedBy(currentUser.getUsername());
+
+            accountStatusRepository.save(existingAccountStatus);
+
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
     }
 
 }
