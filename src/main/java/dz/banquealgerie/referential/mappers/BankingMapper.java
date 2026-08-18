@@ -3,9 +3,13 @@ package dz.banquealgerie.referential.mappers;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Component;
 
+import dz.banquealgerie.referential.domain.dto.banking.agence.AgenceDto;
 import dz.banquealgerie.referential.domain.dto.banking.etablissement.EtablissementDto;
 import dz.banquealgerie.referential.domain.dto.banking.etablissement.EtablissementUpdateDto;
+import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneDto;
+import dz.banquealgerie.referential.domain.entities.banking.AgenceEntity;
 import dz.banquealgerie.referential.domain.entities.banking.EtablissementEntity;
+import dz.banquealgerie.referential.domain.entities.geographic.CommuneEntity;
 
 @Component
 public class BankingMapper {
@@ -37,6 +41,25 @@ public class BankingMapper {
 
     public Page<EtablissementDto> toEtablissementDtoList(Page<EtablissementEntity> entities) {
         return entities.map(this::toEtablissementDto);
+    }
+
+    // agence methods
+    public AgenceEntity toAgenceEntity(AgenceDto agenceDto) {
+        return AgenceEntity.builder()
+                .code(agenceDto.getCode())
+                .libelle(agenceDto.getLibelle())
+                .build();
+    }
+
+    public AgenceDto toAgenceDto(AgenceEntity agenceEntity) {
+        AgenceDto agenceDto = new AgenceDto();
+        agenceDto.setCode(agenceEntity.getCode());
+        agenceDto.setLibelle(agenceEntity.getLibelle());
+        return agenceDto;
+    }
+
+    public Page<AgenceDto> toAgenceDtoList(Page<AgenceEntity> entities) {
+        return entities.map(this::toAgenceDto);
     }
 
 }

@@ -4,6 +4,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
+import dz.banquealgerie.referential.domain.dto.banking.agence.AgenceDto;
+import dz.banquealgerie.referential.domain.dto.banking.agence.AgenceUpdateDto;
 import dz.banquealgerie.referential.domain.dto.banking.etablissement.EtablissementDto;
 import dz.banquealgerie.referential.domain.dto.banking.etablissement.EtablissementUpdateDto;
 import dz.banquealgerie.referential.domain.dto.geographic.BulkImportResponseDto;
@@ -26,4 +28,15 @@ public interface BankingService {
     Page<EtablissementDto> searchEtablissements(String searchTerm, Pageable pageable);
 
     BulkImportResponseDto importEtablissementsBulk(MultipartFile file, UserEntity currentUser, boolean updateIfExists);
+
+    // agence methods
+    AgenceDto createAgence(String etablissementCode, AgenceDto agenceToCreateDTO, UserEntity currentUser);
+
+    Page<AgenceDto> getAgencesByEtablissementCode(String etablissementCode, Pageable pageable);
+
+    AgenceDto updateAgence(String etablissementCode, String agenceCode, AgenceUpdateDto agenceToUpdateDTO, UserEntity currentUser);
+ 
+    void changeAgenceStatus(String agenceCode, UserEntity currentUser);
+
+    BulkImportResponseDto importAgencesBulk(MultipartFile file, UserEntity currentUser, boolean updateIfExists);
 }

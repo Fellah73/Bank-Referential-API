@@ -15,17 +15,27 @@ import org.springframework.data.util.Streamable;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import dz.banquealgerie.referential.domain.dto.banking.agence.AgenceDto;
+import dz.banquealgerie.referential.domain.dto.banking.agence.AgenceUpdateDto;
 import dz.banquealgerie.referential.domain.dto.banking.etablissement.EtablissementDto;
 import dz.banquealgerie.referential.domain.dto.banking.etablissement.EtablissementUpdateDto;
 import dz.banquealgerie.referential.domain.dto.geographic.BulkImportResponseDto;
 import dz.banquealgerie.referential.domain.dto.geographic.ImportErrorDto;
+import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneDto;
+import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneUpdateDto;
 import dz.banquealgerie.referential.domain.entities.UserEntity;
+import dz.banquealgerie.referential.domain.entities.banking.AgenceEntity;
 import dz.banquealgerie.referential.domain.entities.banking.EtablissementEntity;
+import dz.banquealgerie.referential.domain.entities.geographic.CommuneEntity;
+import dz.banquealgerie.referential.domain.entities.geographic.WilayaEntity;
 import dz.banquealgerie.referential.mappers.BankingMapper;
+import dz.banquealgerie.referential.repositories.banking.AgenceRepository;
 import dz.banquealgerie.referential.repositories.banking.EtablissementRepository;
 import dz.banquealgerie.referential.service.BankingService;
 import dz.banquealgerie.referential.utils.excel.ExcelUtils;
+import dz.banquealgerie.referential.utils.excel.banking.AgenceExcelParser;
 import dz.banquealgerie.referential.utils.excel.banking.EtablissementExcelParser;
+import dz.banquealgerie.referential.utils.excel.referentiel.CommuneExcelParser;
 import jakarta.transaction.Transactional;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -34,14 +44,17 @@ import jakarta.validation.Validator;
 public class BankingServiceImpl implements BankingService {
 
     private final EtablissementRepository etablissementRepository;
+    private final AgenceRepository agenceRepository;
 
     private final BankingMapper bankingMapper;
 
     private final Validator validator;
 
-    public BankingServiceImpl(EtablissementRepository etablissementRepository, BankingMapper bankingMapper,
+    public BankingServiceImpl(EtablissementRepository etablissementRepository, AgenceRepository agenceRepository,
+            BankingMapper bankingMapper,
             Validator validator) {
         this.etablissementRepository = etablissementRepository;
+        this.agenceRepository = agenceRepository;
         this.bankingMapper = bankingMapper;
         this.validator = validator;
     }
@@ -297,6 +310,197 @@ public class BankingServiceImpl implements BankingService {
         } catch (Exception e) {
             throw new RuntimeException("Erreur lors de l'importation en masse des établissements : " + e.getMessage());
         }
+    }
+
+    // agence methods
+
+    // create agence
+    @Override
+    @Transactional
+    public AgenceDto createAgence(String etablissementCode, AgenceDto agenceToCreateDTO, UserEntity currentUser) {
+        try {
+            EtablissementEntity existingEtablissement = etablissementRepository.findById(etablissementCode)
+                    .orElse(null);
+            if (existingEtablissement == null) {
+                throw new RuntimeException("Etablissement with code " + etablissementCode + " does not exist");
+            }
+
+            AgenceEntity existingAgence = agenceRepository.findById(agenceToCreateDTO.getCode()).orElse(null);
+            if (existingAgence != null) {
+                throw new RuntimeException("Agence with code " + agenceToCreateDTO.getCode() + " already exists");
+            }
+
+            AgenceEntity newAgence = bankingMapper.toAgenceEntity(agenceToCreateDTO);
+            newAgence.setEtablissement(existingEtablissement);
+            newAgence.setIsActive(true);
+            newAgence.setCreatedAt(java.time.LocalDateTime.now());
+            newAgence.setCreatedBy(currentUser.getUsername());
+
+            agenceRepository.save(newAgence);
+            return bankingMapper.toAgenceDto(newAgence);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    // get agences by etablissement code with pagination
+    @Override
+    public Page<AgenceDto> getAgencesByEtablissementCode(String etablissementCode, Pageable pageable) {
+        try {
+
+            EtablissementEntity existingEtablissement = etablissementRepository.findById(etablissementCode)
+                    .orElse(null);
+            if (existingEtablissement == null) {
+                throw new RuntimeException("Etablissement with code " + etablissementCode + " does not exist");
+            }
+
+            Page<AgenceEntity> agenceList = agenceRepository.findByEtablissementCode(existingEtablissement.getCode(),
+                    pageable);
+            return bankingMapper.toAgenceDtoList(agenceList);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    // update agence
+    @Override
+    public AgenceDto updateAgence(String etablissementCode, String agenceCode, AgenceUpdateDto agenceToUpdateDTO,
+            UserEntity currentUser) {
+        try {
+            EtablissementEntity existingEtablissement = etablissementRepository.findById(etablissementCode)
+                    .orElse(null);
+            if (existingEtablissement == null) {
+                throw new RuntimeException("Etablissement with code " + etablissementCode + " does not exist");
+            }
+
+            AgenceEntity existingAgence = agenceRepository.findById(agenceCode).orElse(null);
+            if (existingAgence == null) {
+                throw new RuntimeException("Agence with code " + agenceCode + " does not exist");
+            }
+
+            existingAgence.setLibelle(
+                    agenceToUpdateDTO.getLibelle() != null ? agenceToUpdateDTO.getLibelle()
+                            : existingAgence.getLibelle());
+            existingAgence.setUpdatedAt(java.time.LocalDateTime.now());
+            existingAgence.setUpdatedBy(currentUser.getUsername());
+
+            agenceRepository.save(existingAgence);
+            return bankingMapper.toAgenceDto(existingAgence);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    // change agence status
+    @Override
+    public void changeAgenceStatus(String agenceCode, UserEntity currentUser) {
+        try {
+            AgenceEntity existingAgence = agenceRepository.findById(agenceCode).orElse(null);
+            if (existingAgence == null) {
+                throw new RuntimeException("Agence with code " + agenceCode + " does not exist");
+            }
+
+            existingAgence.setIsActive(!existingAgence.getIsActive());
+            existingAgence.setUpdatedAt(java.time.LocalDateTime.now());
+            existingAgence.setUpdatedBy(currentUser.getUsername());
+
+            agenceRepository.save(existingAgence);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    // agence bulk-import
+    @Override
+    @Transactional
+    public BulkImportResponseDto importAgencesBulk(MultipartFile file, UserEntity currentUser,
+            boolean updateIfExists) {
+
+        if (!ExcelUtils.hasExcelFormat(file)) {
+            throw new IllegalArgumentException("Le fichier doit être au format Excel (.xlsx)");
+        }
+
+        List<AgenceDto> agenceDtos;
+        try {
+            agenceDtos = AgenceExcelParser.parse(file.getInputStream());
+        } catch (IOException e) {
+            throw new RuntimeException("Erreur lors de la lecture du fichier Excel : " + e.getMessage());
+        }
+
+        List<ImportErrorDto> errors = new ArrayList<>();
+        Set<String> processedCodes = new HashSet<>();
+
+        int successCount = 0;
+        int rowNumber = 2;
+        String username = (currentUser != null) ? currentUser.getUsername() : "SYSTEM";
+
+        for (AgenceDto dto : agenceDtos) {
+
+            Set<ConstraintViolation<AgenceDto>> violations = validator.validate(dto);
+            if (!violations.isEmpty()) {
+                String errorMsg = violations.iterator().next().getMessage();
+                errors.add(new ImportErrorDto(rowNumber, dto.getCode(), errorMsg));
+                rowNumber++;
+                continue;
+            }
+
+            if (processedCodes.contains(dto.getCode())) {
+                errors.add(new ImportErrorDto(rowNumber, dto.getCode(), "Code en double dans le même fichier Excel"));
+                rowNumber++;
+                continue;
+            }
+
+            Optional<EtablissementEntity> etablissementOpt = etablissementRepository.findById(dto.getEtablissementCode());
+            if (etablissementOpt.isEmpty()) {
+                errors.add(new ImportErrorDto(rowNumber, dto.getCode(),
+                        "L'établissement parente avec le code " + dto.getEtablissementCode() + " n'existe pas en BDD"));
+                rowNumber++;
+                continue;
+            }
+
+            EtablissementEntity etablissementEntity = etablissementOpt.get();
+
+            Optional<AgenceEntity> existingAgenceOpt = agenceRepository.findById(dto.getCode());
+
+            if (existingAgenceOpt.isPresent()) {
+                if (!updateIfExists) {
+                    errors.add(
+                            new ImportErrorDto(rowNumber, dto.getCode(), "L'agence avec ce code existe déjà en BDD"));
+                    rowNumber++;
+                    continue;
+                }
+
+                AgenceEntity entityToUpdate = existingAgenceOpt.get();
+                entityToUpdate.setLibelle(dto.getLibelle());
+                entityToUpdate.setEtablissement(etablissementEntity);
+                entityToUpdate.setUpdatedBy(username);
+                entityToUpdate.setUpdatedAt(java.time.LocalDateTime.now());
+
+                agenceRepository.save(entityToUpdate);
+            } else {
+                AgenceEntity newEntity = AgenceEntity.builder()
+                        .code(dto.getCode())
+                        .libelle(dto.getLibelle())
+                        .etablissement(etablissementEntity)
+                        .isActive(true)
+                        .createdBy(username)
+                        .createdAt(java.time.LocalDateTime.now())
+                        .build();
+
+                agenceRepository.save(newEntity);
+            }
+
+            processedCodes.add(dto.getCode());
+            successCount++;
+            rowNumber++;
+        }
+
+        return BulkImportResponseDto.builder()
+                .totalRows(agenceDtos.size())
+                .successCount(successCount)
+                .errorCount(errors.size())
+                .errors(errors)
+                .build();
     }
 
 }

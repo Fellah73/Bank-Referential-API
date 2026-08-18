@@ -20,10 +20,13 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import dz.banquealgerie.referential.domain.dto.ApiResponse;
+import dz.banquealgerie.referential.domain.dto.banking.agence.AgenceDto;
+import dz.banquealgerie.referential.domain.dto.banking.agence.AgenceUpdateDto;
 import dz.banquealgerie.referential.domain.dto.banking.etablissement.EtablissementDto;
 import dz.banquealgerie.referential.domain.dto.banking.etablissement.EtablissementUpdateDto;
 import dz.banquealgerie.referential.domain.dto.geographic.BulkImportResponseDto;
-import dz.banquealgerie.referential.domain.dto.geographic.pays.PaysDto;
+import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneDto;
+import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneUpdateDto;
 import dz.banquealgerie.referential.domain.entities.UserEntity;
 import dz.banquealgerie.referential.service.BankingService;
 import jakarta.validation.Valid;
@@ -204,6 +207,134 @@ public class BankingController {
                             .success(false)
                             .message("Failed to import établissements: " + e.getMessage())
                             .statusCode(500)
+                            .build());
+        }
+    }
+
+    // agence routes
+
+    // create agence
+    @PostMapping("/etablissement/{etablissementCode}/agence")
+    public ResponseEntity<ApiResponse<AgenceDto>> createAgence(
+            @Validated @PathVariable @Pattern(regexp = "^[0-9]{3}$", message = "Le code établissement doit contenir exactement 3 chiffres") String etablissementCode,
+            @Valid @RequestBody AgenceDto agenceToCreateDTO,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        try {
+
+            // created agence
+            bankingService.createAgence(etablissementCode, agenceToCreateDTO, currentUser);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.<AgenceDto>builder()
+                    .success(true)
+                    .message("Agence created successfully")
+                    .statusCode(201)
+                    .data(agenceToCreateDTO)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<AgenceDto>builder()
+                    .success(false)
+                    .message("Failed to create agence: " + e.getMessage())
+                    .statusCode(500)
+                    .build());
+        }
+    }
+
+    // get agences by etablissement code
+    @GetMapping("/etablissement/{etablissementCode}/agence")
+    public ResponseEntity<ApiResponse<Page<AgenceDto>>> getAgencesByEtablissementCode(
+            @Validated @PathVariable @Pattern(regexp = "^[0-9]{3}$", message = "Le code établissement doit contenir exactement 3 chiffres") String etablissementCode,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        try {
+            Page<AgenceDto> agenceList = bankingService.getAgencesByEtablissementCode(etablissementCode, pageable);
+
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<Page<AgenceDto>>builder()
+                    .success(true)
+                    .message("Agence list retrieved successfully")
+                    .statusCode(200)
+                    .data(agenceList)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<Page<AgenceDto>>builder()
+                    .success(false)
+                    .message("Failed to retrieve agence list: " + e.getMessage())
+                    .statusCode(500)
+                    .build());
+        }
+    }
+
+    // update agence
+    @PatchMapping("/etablissement/{etablissementCode}/agence/{agenceCode}")
+    public ResponseEntity<ApiResponse<AgenceDto>> updateAgence(
+            @Validated @PathVariable @Pattern(regexp = "^[0-9]{3}$", message = "Le code établissement doit contenir exactement 3 chiffres") String etablissementCode,
+            @Validated @PathVariable @Pattern(regexp = "^[0-9]{3,20}$", message = "Le code agence doit contenir entre 3 et 20 chiffres") String agenceCode,
+            @Valid @RequestBody AgenceUpdateDto agenceToUpdateDTO,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        try {
+            AgenceDto updatedAgence = bankingService.updateAgence(etablissementCode, agenceCode, agenceToUpdateDTO,
+                    currentUser);
+
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<AgenceDto>builder()
+                    .success(true)
+                    .message("Agence updated successfully")
+                    .statusCode(200)
+                    .data(updatedAgence)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<AgenceDto>builder()
+                    .success(false)
+                    .message("Failed to update agence: " + e.getMessage())
+                    .statusCode(500)
+                    .build());
+        }
+    }
+
+    // change agence status
+    @PatchMapping("/agence/{agenceCode}/status")
+    public ResponseEntity<ApiResponse<Void>> changeAgenceStatus(
+            @Validated @PathVariable @Pattern(regexp = "^[0-9]{3,20}$", message = "Le code agence doit contenir entre 3 et 20 chiffres") String agenceCode,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        try {
+            bankingService.changeAgenceStatus(agenceCode, currentUser);
+
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<Void>builder()
+                    .success(true)
+                    .message("Agence status changed successfully")
+                    .statusCode(200)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<Void>builder()
+                    .success(false)
+                    .message("Failed to change agence status: " + e.getMessage())
+                    .statusCode(500)
+                    .build());
+        }
+    }
+
+    // agences bulk-import
+    @PostMapping(value = "/agence/bulk-import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse<BulkImportResponseDto>> importAgencesBulk(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "updateIfExists", defaultValue = "false") boolean updateIfExists,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        try {
+            BulkImportResponseDto response = bankingService.importAgencesBulk(file, currentUser, updateIfExists);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.<BulkImportResponseDto>builder()
+                    .success(true)
+                    .message("Importation des agences exécutée")
+                    .statusCode(HttpStatus.CREATED.value())
+                    .data(response)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.<BulkImportResponseDto>builder()
+                            .success(false)
+                            .message("Failed to import agences: " + e.getMessage())
+                            .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
                             .build());
         }
     }
