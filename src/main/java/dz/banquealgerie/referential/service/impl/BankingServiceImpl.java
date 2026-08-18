@@ -1,0 +1,302 @@
+package dz.banquealgerie.referential.service.impl;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.util.Streamable;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import dz.banquealgerie.referential.domain.dto.banking.etablissement.EtablissementDto;
+import dz.banquealgerie.referential.domain.dto.banking.etablissement.EtablissementUpdateDto;
+import dz.banquealgerie.referential.domain.dto.geographic.BulkImportResponseDto;
+import dz.banquealgerie.referential.domain.dto.geographic.ImportErrorDto;
+import dz.banquealgerie.referential.domain.entities.UserEntity;
+import dz.banquealgerie.referential.domain.entities.banking.EtablissementEntity;
+import dz.banquealgerie.referential.mappers.BankingMapper;
+import dz.banquealgerie.referential.repositories.banking.EtablissementRepository;
+import dz.banquealgerie.referential.service.BankingService;
+import dz.banquealgerie.referential.utils.excel.ExcelUtils;
+import dz.banquealgerie.referential.utils.excel.banking.EtablissementExcelParser;
+import jakarta.transaction.Transactional;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
+
+@Service
+public class BankingServiceImpl implements BankingService {
+
+    private final EtablissementRepository etablissementRepository;
+
+    private final BankingMapper bankingMapper;
+
+    private final Validator validator;
+
+    public BankingServiceImpl(EtablissementRepository etablissementRepository, BankingMapper bankingMapper,
+            Validator validator) {
+        this.etablissementRepository = etablissementRepository;
+        this.bankingMapper = bankingMapper;
+        this.validator = validator;
+    }
+
+    // create etablissement
+    @Override
+    public EtablissementEntity createEtablissment(EtablissementDto etablissementDto, UserEntity currentUser) {
+        try {
+
+            // convert dto to entity
+            EtablissementEntity etablissement = bankingMapper.toEtablissementEntity(etablissementDto);
+
+            EtablissementEntity existingEtablissement = etablissementRepository
+                    .findByCode(etablissement.getCode());
+            if (existingEtablissement != null) {
+                throw new RuntimeException("Country with code " + etablissement.getCode() + " already exists");
+            }
+
+            EtablissementEntity etablissementToSave = EtablissementEntity.builder()
+                    .code(etablissement.getCode())
+                    .abreviation(etablissement.getAbreviation())
+                    .libelle(etablissement.getLibelle())
+                    .isActive(true)
+                    .createdAt(java.time.LocalDateTime.now())
+                    .createdBy(currentUser.getUsername())
+                    .build();
+
+            etablissementRepository.save(etablissementToSave);
+
+            return etablissementToSave;
+
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    // get all countries with pagination
+    @Override
+    public Page<EtablissementDto> getAllEtablissement(Pageable pageable) {
+        try {
+            Page<EtablissementEntity> etablissementList = etablissementRepository.findAll(pageable);
+            Page<EtablissementDto> etablissementDtoList = bankingMapper.toEtablissementDtoList(etablissementList);
+            return etablissementDtoList;
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    // get etablissement by code
+    @Override
+    public EtablissementDto getEtablissementByCode(String code) {
+        try {
+            EtablissementEntity existingEtablissement = etablissementRepository.findByCode(code);
+            if (existingEtablissement == null) {
+                throw new RuntimeException("Country with code " + code + " does not exist");
+            }
+
+            return bankingMapper.toEtablissementDto(existingEtablissement);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    // update country
+    @Override
+    public EtablissementDto updateEtablissement(String code, EtablissementUpdateDto etablissmenetDto,
+            UserEntity currentUser) {
+        try {
+            EtablissementEntity existingEtablissement = etablissementRepository.findByCode(code);
+            if (existingEtablissement == null) {
+                throw new RuntimeException("Country with code " + code + " does not exist");
+            }
+
+            EtablissementEntity etablissement = bankingMapper.toEtablissementEntity(etablissmenetDto);
+
+            existingEtablissement.setAbreviation(
+                    etablissement.getAbreviation() != null ? etablissement.getAbreviation()
+                            : existingEtablissement.getAbreviation());
+            existingEtablissement.setLibelle(etablissement.getLibelle() != null ? etablissement.getLibelle()
+                    : existingEtablissement.getLibelle());
+            existingEtablissement.setUpdatedAt(java.time.LocalDateTime.now());
+            existingEtablissement.setUpdatedBy(currentUser.getUsername());
+
+            etablissementRepository.save(existingEtablissement);
+
+            EtablissementDto updatedEtablissementDto = bankingMapper.toEtablissementDto(existingEtablissement);
+            return updatedEtablissementDto;
+
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    // change etablissement status
+    @Override
+    public void changeEtablissementStatus(String code, UserEntity currentUser) {
+        try {
+            EtablissementEntity existingEtablissement = etablissementRepository.findByCode(code);
+            if (existingEtablissement == null) {
+                throw new RuntimeException("Etablissement with code " + code + " does not exist");
+            }
+
+            existingEtablissement.setIsActive(!existingEtablissement.getIsActive());
+            existingEtablissement.setUpdatedAt(java.time.LocalDateTime.now());
+            existingEtablissement.setUpdatedBy(currentUser.getUsername());
+
+            etablissementRepository.save(existingEtablissement);
+
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    // search countries by abreviation or libelle
+    @Override
+    public Page<EtablissementDto> searchEtablissements(String searchTerm, Pageable pageable) {
+        try {
+            Page<EtablissementEntity> etablissementList = etablissementRepository.findAll(pageable);
+
+            Streamable<EtablissementEntity> streamableEtablissementList = Streamable.of(etablissementList.getContent());
+
+            if (searchTerm != null && !searchTerm.isEmpty()) {
+                streamableEtablissementList = streamableEtablissementList
+                        .filter(etablissement -> etablissement.getLibelle().toLowerCase()
+                                .contains(searchTerm.toLowerCase())
+                                || etablissement.getAbreviation().toLowerCase().contains(searchTerm.toLowerCase()));
+            }
+            if (streamableEtablissementList.isEmpty()) {
+                throw new RuntimeException("No etablissement found for the given search criteria");
+            }
+
+            // streamble to page
+            etablissementList = streamableEtablissementList.toList().stream()
+                    .collect(Collectors.collectingAndThen(Collectors.toList(),
+                            list -> new PageImpl<>(list, pageable, list.size())));
+
+            Page<EtablissementDto> etablissementDtoList = bankingMapper.toEtablissementDtoList(etablissementList);
+            return etablissementDtoList;
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    // etablissement bulk-import
+    @Override
+    @Transactional
+    public BulkImportResponseDto importEtablissementsBulk(MultipartFile file, UserEntity currentUser,
+            boolean updateIfExists) {
+
+        if (!ExcelUtils.hasExcelFormat(file)) {
+            throw new IllegalArgumentException("Le fichier doit être au format Excel (.xlsx)");
+        }
+
+        List<EtablissementDto> etablissementDtos;
+        try {
+            etablissementDtos = EtablissementExcelParser.parse(file.getInputStream());
+        } catch (IOException e) {
+            throw new RuntimeException("Erreur lors de la lecture du fichier Excel : " + e.getMessage());
+        }
+
+        List<ImportErrorDto> errors = new ArrayList<>();
+        try {
+            Set<String> processedCodes = new HashSet<>();
+            Set<String> processedLibelles = new HashSet<>();
+            Set<String> processedAbreviation = new HashSet<>();
+            int successCount = 0;
+            int rowNumber = 2;
+
+            String username = (currentUser != null) ? currentUser.getUsername() : "SYSTEM";
+
+            for (EtablissementDto dto : etablissementDtos) {
+
+                System.out.println("Processing row " + rowNumber + ": " + dto);
+                System.out.println(
+                        "etablissement " + dto.getCode() + " - " + dto.getAbreviation() + " - " + dto.getLibelle());
+
+                Set<ConstraintViolation<EtablissementDto>> violations = validator.validate(dto);
+                if (!violations.isEmpty()) {
+                    String errorMsg = violations.iterator().next().getMessage();
+                    errors.add(new ImportErrorDto(rowNumber, dto.getCode(), errorMsg));
+                    rowNumber++;
+                    continue;
+                }
+
+                if (processedCodes.contains(dto.getCode())) {
+                    errors.add(
+                            new ImportErrorDto(rowNumber, dto.getCode(), "Code en double dans le même fichier Excel"));
+                    rowNumber++;
+                    continue;
+                }
+
+                if (processedLibelles.contains(dto.getLibelle())) {
+                    errors.add(
+                            new ImportErrorDto(rowNumber, dto.getCode(),
+                                    "Libellé en double dans le même fichier Excel"));
+                    rowNumber++;
+                    continue;
+                }
+
+                if (processedAbreviation.contains(dto.getAbreviation())) {
+                    errors.add(
+                            new ImportErrorDto(rowNumber, dto.getCode(),
+                                    "abréviation en double dans le même fichier Excel"));
+                    rowNumber++;
+                    continue;
+                }
+
+                Optional<EtablissementEntity> existingEtablissementOpt = etablissementRepository
+                        .findById(dto.getCode());
+
+                if (existingEtablissementOpt.isPresent()) {
+                    if (!updateIfExists) {
+                        errors.add(new ImportErrorDto(rowNumber, dto.getCode(),
+                                "L'établissement avec ce code existe déjà"));
+                        rowNumber++;
+                        continue;
+                    }
+
+                    // Upsert
+                    EtablissementEntity entityToUpdate = existingEtablissementOpt.get();
+                    entityToUpdate.setLibelle(dto.getLibelle());
+                    entityToUpdate.setAbreviation(dto.getAbreviation());
+                    entityToUpdate.setUpdatedBy(username);
+                    entityToUpdate.setUpdatedAt(java.time.LocalDateTime.now());
+
+                    etablissementRepository.save(entityToUpdate);
+                } else {
+                    EtablissementEntity newEntity = EtablissementEntity.builder()
+                            .code(dto.getCode())
+                            .libelle(dto.getLibelle())
+                            .abreviation(dto.getAbreviation())
+                            .isActive(true)
+                            .createdBy(username)
+                            .createdAt(java.time.LocalDateTime.now())
+                            .build();
+
+                    etablissementRepository.save(newEntity);
+                }
+
+                processedCodes.add(dto.getCode());
+                processedLibelles.add(dto.getLibelle());
+                processedAbreviation.add(dto.getAbreviation());
+                successCount++;
+                rowNumber++;
+            }
+
+            return BulkImportResponseDto.builder()
+                    .totalRows(etablissementDtos.size())
+                    .successCount(successCount)
+                    .errorCount(errors.size())
+                    .errors(errors)
+                    .build();
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors de l'importation en masse des établissements : " + e.getMessage());
+        }
+    }
+
+}
