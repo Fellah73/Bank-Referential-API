@@ -7,8 +7,12 @@ import dz.banquealgerie.referential.domain.dto.regulatory.ActivityDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.ActivityUpdateDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.FormeJuridiqueDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.FormeJuridiqueUpdateDto;
+import dz.banquealgerie.referential.domain.dto.regulatory.NifDto;
+import dz.banquealgerie.referential.domain.dto.regulatory.NifResponseDto;
+import dz.banquealgerie.referential.domain.dto.regulatory.NifUpdateDto;
 import dz.banquealgerie.referential.domain.entities.regulatory.ActivityEntity;
 import dz.banquealgerie.referential.domain.entities.regulatory.FormeJuridiqueEntity;
+import dz.banquealgerie.referential.domain.entities.regulatory.NifEntity;
 
 @Component
 public class RegulatoryMapper {
@@ -69,5 +73,64 @@ public class RegulatoryMapper {
 
     public Page<ActivityDto> toActivityDtoList(Page<ActivityEntity> entityList) {
         return entityList.map(this::toActivityDto);
+    }
+
+    // nif methods
+    public NifEntity toNifEntity(NifDto dto) {
+        return NifEntity.builder()
+                .nif(dto.getNif())
+                .rc(dto.getRc())
+                .activity(ActivityEntity.builder().code(dto.getActivityCode()).build())
+                .dateCreation(dto.getDateCreation())
+                .designation(dto.getDesignation())
+                .formeJuridique(FormeJuridiqueEntity.builder().code(dto.getFormeJuridiqueCode()).build())
+                .build();
+    }
+
+    public NifEntity toNifEntity(NifUpdateDto dto) {
+        return NifEntity.builder()
+                .rc(dto.getRc())
+                .activity(ActivityEntity.builder().code(dto.getActivityCode()).build())
+                .designation(dto.getDesignation())
+                .formeJuridique(FormeJuridiqueEntity.builder().code(dto.getFormeJuridiqueCode()).build())
+                .build();
+    }
+
+    public NifDto toNifDto(NifEntity entity) {
+        NifDto nifDto = new NifDto();
+        nifDto.setNif(entity.getNif());
+        nifDto.setRc(entity.getRc());
+        nifDto.setActivityCode(entity.getActivity().getCode());
+        nifDto.setDateCreation(entity.getDateCreation());
+        nifDto.setDesignation(entity.getDesignation());
+        nifDto.setFormeJuridiqueCode(entity.getFormeJuridique().getCode());
+        return nifDto;
+    }
+
+    public NifResponseDto toNifResponseDto(NifEntity entity) {
+        if (entity == null) {
+            return null;
+        }
+
+        NifResponseDto dto = new NifResponseDto();
+        dto.setNif(entity.getNif());
+        dto.setRc(entity.getRc());
+        dto.setDateCreation(entity.getDateCreation());
+        dto.setDesignation(entity.getDesignation());
+        dto.setIsActive(entity.getIsActive());
+
+        if (entity.getActivity() != null) {
+            dto.setActivity(toActivityDto(entity.getActivity()));
+        }
+
+        if (entity.getFormeJuridique() != null) {
+            dto.setFormeJuridique(toFormeJuridiqueDto(entity.getFormeJuridique()));
+        }
+
+        return dto;
+    }
+
+    public Page<NifResponseDto> toNifResponseDtoList(Page<NifEntity> entityList) {
+        return entityList.map(this::toNifResponseDto);
     }
 }

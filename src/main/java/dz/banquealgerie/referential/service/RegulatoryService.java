@@ -7,6 +7,9 @@ import dz.banquealgerie.referential.domain.dto.regulatory.ActivityDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.ActivityUpdateDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.FormeJuridiqueDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.FormeJuridiqueUpdateDto;
+import dz.banquealgerie.referential.domain.dto.regulatory.NifDto;
+import dz.banquealgerie.referential.domain.dto.regulatory.NifResponseDto;
+import dz.banquealgerie.referential.domain.dto.regulatory.NifUpdateDto;
 import dz.banquealgerie.referential.domain.entities.UserEntity;
 
 public interface RegulatoryService {
@@ -28,4 +31,13 @@ public interface RegulatoryService {
     ActivityDto updateActivity(String code, ActivityUpdateDto activityToUpdateDTO, UserEntity currentUser);
 
     void changeActivityStatus(String code, UserEntity currentUser);
+
+    // nif routes
+    NifDto createNif(NifDto nifToCreateDTO, UserEntity currentUser);
+
+    Page<NifResponseDto> getAllNifs(Pageable pageable);
+
+    NifResponseDto updateNif(String code, NifUpdateDto nifToUpdateDTO, UserEntity currentUser);
+
+    void changeNifStatus(String code, UserEntity currentUser);
 }

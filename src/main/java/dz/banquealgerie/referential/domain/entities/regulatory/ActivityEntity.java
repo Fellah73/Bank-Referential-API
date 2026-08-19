@@ -1,11 +1,17 @@
 package dz.banquealgerie.referential.domain.entities.regulatory;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import dz.banquealgerie.referential.domain.entities.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -31,5 +37,9 @@ public class ActivityEntity extends BaseEntity {
 
     @Column(name = "libelle", length = 255, nullable = false)
     private String libelle;
+
+    @OneToMany(mappedBy = "activity", fetch = FetchType.LAZY)
+    @Builder.Default
+    private List<NifEntity> nifs = new ArrayList<>();
 
 }

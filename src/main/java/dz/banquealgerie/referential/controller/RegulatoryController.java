@@ -17,10 +17,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import dz.banquealgerie.referential.domain.dto.ApiResponse;
+import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.ActivityDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.ActivityUpdateDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.FormeJuridiqueDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.FormeJuridiqueUpdateDto;
+import dz.banquealgerie.referential.domain.dto.regulatory.NifDto;
+import dz.banquealgerie.referential.domain.dto.regulatory.NifResponseDto;
+import dz.banquealgerie.referential.domain.dto.regulatory.NifUpdateDto;
 import dz.banquealgerie.referential.domain.entities.UserEntity;
 import dz.banquealgerie.referential.service.RegulatoryService;
 import jakarta.validation.Valid;
@@ -228,6 +232,104 @@ public class RegulatoryController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<Void>builder()
                     .success(false)
                     .message("Failed to change activity status: " + e.getMessage())
+                    .statusCode(500)
+                    .build());
+        }
+    }
+
+    // nif routes
+
+    // create nif
+    @PostMapping("/nif")
+    public ResponseEntity<ApiResponse<NifDto>> createNif(
+            @Valid @RequestBody NifDto nifToCreateDTO,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        try {
+
+            regulatoryService.createNif(nifToCreateDTO, currentUser);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.<NifDto>builder()
+                    .success(true)
+                    .message("NIF created successfully")
+                    .statusCode(201)
+                    .data(nifToCreateDTO)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<NifDto>builder()
+                    .success(false)
+                    .message("Failed to create NIF: " + e.getMessage())
+                    .statusCode(500)
+                    .build());
+        }
+    }
+
+    // get all nif with pagination
+    @GetMapping("/nif")
+    public ResponseEntity<ApiResponse<Page<NifResponseDto>>> getAllNifs(
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        try {
+            Page<NifResponseDto> nifList = regulatoryService.getAllNifs(pageable);
+
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<Page<NifResponseDto>>builder()
+                    .success(true)
+                    .message("NIF list retrieved successfully")
+                    .statusCode(200)
+                    .data(nifList)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.<Page<NifResponseDto>>builder()
+                            .success(false)
+                            .message("Failed to retrieve NIF list: " + e.getMessage())
+                            .statusCode(500)
+                            .build());
+        }
+    }
+
+    // update nif
+    @PatchMapping("/nif/{code}")
+    public ResponseEntity<ApiResponse<NifResponseDto>> updateNif(
+            @Validated @PathVariable @Pattern(regexp = "^[0-9]{15,20}$", message = "Le code NIF doit contenir entre 15 et 20 chiffres") String code,
+            @Valid @RequestBody NifUpdateDto nifToUpdateDTO,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        try {
+            NifResponseDto updatedNif = regulatoryService.updateNif(code, nifToUpdateDTO, currentUser);
+
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<NifResponseDto>builder()
+                    .success(true)
+                    .message("NIF updated successfully")
+                    .statusCode(200)
+                    .data(updatedNif)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<NifResponseDto>builder()
+                    .success(false)
+                    .message("Failed to update NIF: " + e.getMessage())
+                    .statusCode(500)
+                    .build());
+        }
+    }
+
+    // change nif status
+    @PatchMapping("/nif/{code}/status")
+    public ResponseEntity<ApiResponse<Void>> changeNifStatus(
+            @Validated @PathVariable @Pattern(regexp = "^[0-9]{15,20}$", message = "Le code NIF doit contenir entre 15 et 20 chiffres") String code,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        try {
+            regulatoryService.changeNifStatus(code, currentUser);
+
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<Void>builder()
+                    .success(true)
+                    .message("NIF status changed successfully")
+                    .statusCode(200)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<Void>builder()
+                    .success(false)
+                    .message("Failed to change NIF status: " + e.getMessage())
                     .statusCode(500)
                     .build());
         }
