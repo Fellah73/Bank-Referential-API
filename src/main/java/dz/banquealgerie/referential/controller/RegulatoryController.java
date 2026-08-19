@@ -17,6 +17,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import dz.banquealgerie.referential.domain.dto.ApiResponse;
+import dz.banquealgerie.referential.domain.dto.regulatory.ActivityDto;
+import dz.banquealgerie.referential.domain.dto.regulatory.ActivityUpdateDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.FormeJuridiqueDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.FormeJuridiqueUpdateDto;
 import dz.banquealgerie.referential.domain.entities.UserEntity;
@@ -58,7 +60,7 @@ public class RegulatoryController {
                     .build());
         }
     }
-  
+
     // get all legal forms with pagination
     @GetMapping("/legal-forms")
     public ResponseEntity<ApiResponse<Page<FormeJuridiqueDto>>> getAllLegalForms(
@@ -73,24 +75,26 @@ public class RegulatoryController {
                     .data(legalFormsList)
                     .build());
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<Page<FormeJuridiqueDto>>builder()
-                    .success(false)
-                    .message("Failed to retrieve legal forms list: " + e.getMessage())
-                    .statusCode(500)
-                    .build());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.<Page<FormeJuridiqueDto>>builder()
+                            .success(false)
+                            .message("Failed to retrieve legal forms list: " + e.getMessage())
+                            .statusCode(500)
+                            .build());
         }
     }
 
-     // update legal-form
+    // update legal-form
     @PatchMapping("/legal-forms/{code}")
     public ResponseEntity<ApiResponse<FormeJuridiqueDto>> updateLegalForm(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code forme juridique doit contenir exactement 2 chiffres") String code,
-            @RequestBody FormeJuridiqueUpdateDto formeJuridiqueToUpdateDTO,
+            @Valid @RequestBody FormeJuridiqueUpdateDto formeJuridiqueToUpdateDTO,
             @AuthenticationPrincipal UserEntity currentUser) {
 
         try {
             // updated forme juridique
-            FormeJuridiqueDto updatedFormeJuridique = regulatoryService.updateLegalForm(code, formeJuridiqueToUpdateDTO, currentUser);
+            FormeJuridiqueDto updatedFormeJuridique = regulatoryService.updateLegalForm(code, formeJuridiqueToUpdateDTO,
+                    currentUser);
 
             return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<FormeJuridiqueDto>builder()
                     .success(true)
@@ -126,6 +130,104 @@ public class RegulatoryController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<Void>builder()
                     .success(false)
                     .message("Failed to change legal form status: " + e.getMessage())
+                    .statusCode(500)
+                    .build());
+        }
+    }
+
+    // activity routes
+
+    // create activity
+    @PostMapping("/activities")
+    public ResponseEntity<ApiResponse<ActivityDto>> createActivity(
+            @Valid @RequestBody ActivityDto activityToCreateDTO,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        try {
+
+            regulatoryService.createActivity(activityToCreateDTO, currentUser);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.<ActivityDto>builder()
+                    .success(true)
+                    .message("Activity created successfully")
+                    .statusCode(201)
+                    .data(activityToCreateDTO)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<ActivityDto>builder()
+                    .success(false)
+                    .message("Failed to create activity: " + e.getMessage())
+                    .statusCode(500)
+                    .build());
+        }
+    }
+
+    // get all activities with pagination
+    @GetMapping("/activities")
+    public ResponseEntity<ApiResponse<Page<ActivityDto>>> getAllActivities(
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        try {
+            Page<ActivityDto> activitiesList = regulatoryService.getAllActivities(pageable);
+
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<Page<ActivityDto>>builder()
+                    .success(true)
+                    .message("Activities list retrieved successfully")
+                    .statusCode(200)
+                    .data(activitiesList)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.<Page<ActivityDto>>builder()
+                            .success(false)
+                            .message("Failed to retrieve activities list: " + e.getMessage())
+                            .statusCode(500)
+                            .build());
+        }
+    }
+
+    // update activities
+    @PatchMapping("/activities/{code}")
+    public ResponseEntity<ApiResponse<ActivityDto>> updateActivity(
+            @Validated @PathVariable @Pattern(regexp = "^[0-9]{6}$", message = "Le code activité doit contenir exactement 6 chiffres") String code,
+            @Valid @RequestBody ActivityUpdateDto activityToUpdateDTO,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        try {
+            ActivityDto updatedActivity = regulatoryService.updateActivity(code, activityToUpdateDTO, currentUser);
+
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<ActivityDto>builder()
+                    .success(true)
+                    .message("Activity updated successfully")
+                    .statusCode(200)
+                    .data(updatedActivity)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<ActivityDto>builder()
+                    .success(false)
+                    .message("Failed to update activity: " + e.getMessage())
+                    .statusCode(500)
+                    .build());
+        }
+    }
+
+    // change activity status
+    @PatchMapping("/activities/{code}/status")
+    public ResponseEntity<ApiResponse<Void>> changeActivityStatus(
+            @Validated @PathVariable @Pattern(regexp = "^[0-9]{6}$", message = "Le code activité doit contenir exactement 6 chiffres") String code,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        try {
+            regulatoryService.changeActivityStatus(code, currentUser);
+
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<Void>builder()
+                    .success(true)
+                    .message("Activity status changed successfully")
+                    .statusCode(200)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<Void>builder()
+                    .success(false)
+                    .message("Failed to change activity status: " + e.getMessage())
                     .statusCode(500)
                     .build());
         }

@@ -4,22 +4,30 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import dz.banquealgerie.referential.domain.dto.regulatory.ActivityDto;
+import dz.banquealgerie.referential.domain.dto.regulatory.ActivityUpdateDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.FormeJuridiqueDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.FormeJuridiqueUpdateDto;
 import dz.banquealgerie.referential.domain.entities.UserEntity;
+import dz.banquealgerie.referential.domain.entities.regulatory.ActivityEntity;
 import dz.banquealgerie.referential.domain.entities.regulatory.FormeJuridiqueEntity;
 import dz.banquealgerie.referential.mappers.RegulatoryMapper;
+import dz.banquealgerie.referential.repositories.regulatory.ActivityRepository;
 import dz.banquealgerie.referential.repositories.regulatory.FormJuridiqueRepository;
 import dz.banquealgerie.referential.service.RegulatoryService;
 
 @Service
 public class RegulatoryServiceImpl implements RegulatoryService {
     private final RegulatoryMapper regulatoryMapper;
-    private final FormJuridiqueRepository formJuridiqueRepository;
 
-    public RegulatoryServiceImpl(FormJuridiqueRepository formJuridiqueRepository, RegulatoryMapper regulatoryMapper) {
+    private final FormJuridiqueRepository formJuridiqueRepository;
+    private final ActivityRepository activityRepository;
+
+    public RegulatoryServiceImpl(FormJuridiqueRepository formJuridiqueRepository, RegulatoryMapper regulatoryMapper,
+            ActivityRepository activityRepository) {
         this.formJuridiqueRepository = formJuridiqueRepository;
         this.regulatoryMapper = regulatoryMapper;
+        this.activityRepository = activityRepository;
     }
 
     // form-juridique methods
@@ -99,7 +107,7 @@ public class RegulatoryServiceImpl implements RegulatoryService {
         }
     }
 
-     // change legal form status
+    // change legal form status
     @Override
     public void changeLegalFormStatus(String code, UserEntity currentUser) {
         try {
@@ -115,6 +123,106 @@ public class RegulatoryServiceImpl implements RegulatoryService {
 
             // saving the updated legal form
             formJuridiqueRepository.save(existingFormeJuridique);
+
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    // activity methods
+
+    // create an activity
+    @Override
+    public ActivityDto createActivity(ActivityDto activityToCreateDTO, UserEntity currentUser) {
+
+        try {
+
+            ActivityEntity activity = regulatoryMapper.toActivityEntity(activityToCreateDTO);
+
+            ActivityEntity existingActivity = activityRepository.findById(activity.getCode()).orElse(null);
+            if (existingActivity != null) {
+                throw new RuntimeException("Activity with code " + activity.getCode() + " already exists");
+            }
+
+            ActivityEntity activityToSave = ActivityEntity.builder()
+                    .code(activity.getCode())
+                    .codeSection(activity.getCodeSection())
+                    .domaine(activity.getDomaine())
+                    .libelle(activity.getLibelle())
+                    .isActive(true)
+                    .createdAt(java.time.LocalDateTime.now())
+                    .createdBy(currentUser.getUsername())
+                    .build();
+
+            activityRepository.save(activityToSave);
+
+            return regulatoryMapper.toActivityDto(activityToSave);
+
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    // get all activities with pagination
+    @Override
+    public Page<ActivityDto> getAllActivities(Pageable pageable) {
+        try {
+            Page<ActivityEntity> activitiesList = activityRepository.findAll(pageable);
+            Page<ActivityDto> activitiesDtoList = regulatoryMapper.toActivityDtoList(activitiesList);
+            return activitiesDtoList;
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    // update activity
+    @Override
+    public ActivityDto updateActivity(String code, ActivityUpdateDto activityToUpdateDTO,
+            UserEntity currentUser) {
+        try {
+            ActivityEntity existingActivity = activityRepository.findById(code)
+                    .orElse(null);
+            if (existingActivity == null) {
+                throw new RuntimeException("Activity with code " + code + " does not exist");
+            }
+
+            ActivityEntity activity = regulatoryMapper.toActivityEntity(activityToUpdateDTO);
+
+            existingActivity.setCodeSection(
+                    activity.getCodeSection() != null ? activity.getCodeSection()
+                            : existingActivity.getCodeSection());
+            existingActivity.setDomaine(activity.getDomaine() != null ? activity.getDomaine()
+                    : existingActivity.getDomaine());
+            existingActivity.setLibelle(activity.getLibelle() != null ? activity.getLibelle()
+                    : existingActivity.getLibelle());
+            existingActivity.setUpdatedAt(java.time.LocalDateTime.now());
+            existingActivity.setUpdatedBy(currentUser.getUsername());
+
+            activityRepository.save(existingActivity);
+
+            ActivityDto updatedActivityDto = regulatoryMapper.toActivityDto(existingActivity);
+            return updatedActivityDto;
+
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+      // change activity status
+    @Override
+    public void changeActivityStatus(String code, UserEntity currentUser) {
+        try {
+            ActivityEntity existingActivity = activityRepository.findById(code)
+                    .orElse(null);
+            if (existingActivity == null) {
+                throw new RuntimeException("Activity with code " + code + " does not exist");
+            }
+
+            existingActivity.setIsActive(!existingActivity.getIsActive());
+            existingActivity.setUpdatedAt(java.time.LocalDateTime.now());
+            existingActivity.setUpdatedBy(currentUser.getUsername());
+
+            activityRepository.save(existingActivity);
 
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage());

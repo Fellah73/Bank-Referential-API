@@ -3,6 +3,8 @@ package dz.banquealgerie.referential.service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import dz.banquealgerie.referential.domain.dto.regulatory.ActivityDto;
+import dz.banquealgerie.referential.domain.dto.regulatory.ActivityUpdateDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.FormeJuridiqueDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.FormeJuridiqueUpdateDto;
 import dz.banquealgerie.referential.domain.entities.UserEntity;
@@ -17,4 +19,13 @@ public interface RegulatoryService {
             UserEntity currentUser);
 
     void changeLegalFormStatus(String code, UserEntity currentUser);
+
+    // activity routes
+    ActivityDto createActivity(ActivityDto activityToCreateDTO, UserEntity currentUser);
+
+    Page<ActivityDto> getAllActivities(Pageable pageable);
+
+    ActivityDto updateActivity(String code, ActivityUpdateDto activityToUpdateDTO, UserEntity currentUser);
+
+    void changeActivityStatus(String code, UserEntity currentUser);
 }

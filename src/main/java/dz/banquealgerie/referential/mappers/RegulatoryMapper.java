@@ -3,8 +3,11 @@ package dz.banquealgerie.referential.mappers;
 import org.springframework.stereotype.Component;
 import org.springframework.data.domain.Page;
 
+import dz.banquealgerie.referential.domain.dto.regulatory.ActivityDto;
+import dz.banquealgerie.referential.domain.dto.regulatory.ActivityUpdateDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.FormeJuridiqueDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.FormeJuridiqueUpdateDto;
+import dz.banquealgerie.referential.domain.entities.regulatory.ActivityEntity;
 import dz.banquealgerie.referential.domain.entities.regulatory.FormeJuridiqueEntity;
 
 @Component
@@ -35,5 +38,36 @@ public class RegulatoryMapper {
 
     public Page<FormeJuridiqueDto> toFormeJuridiqueDtoList(Page<FormeJuridiqueEntity> entityList) {
         return entityList.map(this::toFormeJuridiqueDto);
+    }
+
+    // activity methods
+    public ActivityEntity toActivityEntity(ActivityDto dto) {
+        return ActivityEntity.builder()
+                .code(dto.getCode())
+                .codeSection(dto.getCodeSection())
+                .domaine(dto.getDomaine())
+                .libelle(dto.getLibelle())
+                .build();
+    }
+
+    public ActivityEntity toActivityEntity(ActivityUpdateDto dto) {
+        return ActivityEntity.builder()
+                .codeSection(dto.getCodeSection())
+                .domaine(dto.getDomaine())
+                .libelle(dto.getLibelle())
+                .build();
+    }
+
+    public ActivityDto toActivityDto(ActivityEntity entity) {
+        ActivityDto activityDto = new ActivityDto();
+        activityDto.setCode(entity.getCode());
+        activityDto.setCodeSection(entity.getCodeSection());
+        activityDto.setDomaine(entity.getDomaine());
+        activityDto.setLibelle(entity.getLibelle());
+        return activityDto;
+    }
+
+    public Page<ActivityDto> toActivityDtoList(Page<ActivityEntity> entityList) {
+        return entityList.map(this::toActivityDto);
     }
 }
