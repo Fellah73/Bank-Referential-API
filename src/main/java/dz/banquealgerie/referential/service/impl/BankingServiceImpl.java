@@ -23,13 +23,10 @@ import dz.banquealgerie.referential.domain.dto.banking.etablissement.Etablisseme
 import dz.banquealgerie.referential.domain.dto.banking.etablissement.EtablissementUpdateDto;
 import dz.banquealgerie.referential.domain.dto.geographic.BulkImportResponseDto;
 import dz.banquealgerie.referential.domain.dto.geographic.ImportErrorDto;
-import dz.banquealgerie.referential.domain.dto.geographic.pays.PaysDto;
-import dz.banquealgerie.referential.domain.dto.geographic.pays.PaysUpdateDto;
 import dz.banquealgerie.referential.domain.entities.UserEntity;
 import dz.banquealgerie.referential.domain.entities.banking.AccountStatusEntity;
 import dz.banquealgerie.referential.domain.entities.banking.AgenceEntity;
 import dz.banquealgerie.referential.domain.entities.banking.EtablissementEntity;
-import dz.banquealgerie.referential.domain.entities.geographic.PaysEntity;
 import dz.banquealgerie.referential.mappers.BankingMapper;
 import dz.banquealgerie.referential.repositories.banking.AccountStatusRepository;
 import dz.banquealgerie.referential.repositories.banking.AgenceRepository;
