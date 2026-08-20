@@ -1,9 +1,13 @@
 package dz.banquealgerie.referential.controller;
 
+import java.io.ByteArrayInputStream;
+
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -211,6 +215,21 @@ public class GeographicController {
         }
     }
 
+    // export countries
+    @GetMapping("/pays/bulk-export")
+    public ResponseEntity<InputStreamResource> exportPaysBulk(
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        ByteArrayInputStream response = geographicService.exportPaysToExcel();
+        InputStreamResource file = new InputStreamResource(response);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=pays_export.xlsx")
+                .contentType(
+                        MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(file);
+    }
+
     // wilaya routes
     @PostMapping("/wilaya")
     public ResponseEntity<ApiResponse<WilayaDto>> createWilaya(
@@ -382,6 +401,21 @@ public class GeographicController {
         }
     }
 
+    // export wilayas bulk
+    @GetMapping("/wilaya/bulk-export")
+    public ResponseEntity<InputStreamResource> exportWilayasBulk(
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        ByteArrayInputStream response = geographicService.exportWilayasToExcel();
+        InputStreamResource file = new InputStreamResource(response);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=wilayas_export.xlsx")
+                .contentType(
+                        MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(file);
+    }
+
     // commune routes
 
     // create commune
@@ -508,6 +542,21 @@ public class GeographicController {
                             .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
                             .build());
         }
+    }
+
+     // export communes bulk
+    @GetMapping("/commune/bulk-export")
+    public ResponseEntity<InputStreamResource> exportCommunesBulk(
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        ByteArrayInputStream response = geographicService.exportCommunesToExcel();
+        InputStreamResource file = new InputStreamResource(response);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=communes_export.xlsx")
+                .contentType(
+                        MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(file);
     }
 
 }

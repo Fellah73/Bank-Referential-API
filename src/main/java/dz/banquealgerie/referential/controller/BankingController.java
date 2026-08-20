@@ -1,9 +1,13 @@
 package dz.banquealgerie.referential.controller;
 
+import java.io.ByteArrayInputStream;
+
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +27,7 @@ import dz.banquealgerie.referential.domain.dto.ApiResponse;
 import dz.banquealgerie.referential.domain.dto.banking.accountStatus.AccountStatusDto;
 import dz.banquealgerie.referential.domain.dto.banking.accountStatus.AccountStatusUpdateDto;
 import dz.banquealgerie.referential.domain.dto.banking.agence.AgenceDto;
+import dz.banquealgerie.referential.domain.dto.banking.agence.AgenceExcelExportDto;
 import dz.banquealgerie.referential.domain.dto.banking.agence.AgenceUpdateDto;
 import dz.banquealgerie.referential.domain.dto.banking.etablissement.EtablissementDto;
 import dz.banquealgerie.referential.domain.dto.banking.etablissement.EtablissementUpdateDto;
@@ -211,6 +216,21 @@ public class BankingController {
         }
     }
 
+    // export etablissements
+    @GetMapping("/etablissement/bulk-export")
+    public ResponseEntity<InputStreamResource> exportEtablissementsBulk(
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        ByteArrayInputStream response = bankingService.exportEtablissementsToExcel();
+        InputStreamResource file = new InputStreamResource(response);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=etablissements_export.xlsx")
+                .contentType(
+                        MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(file);
+    }
+
     // agence routes
 
     // create agence
@@ -339,6 +359,22 @@ public class BankingController {
         }
     }
 
+    // export agences
+    @GetMapping("/agence/bulk-export")
+    public ResponseEntity<InputStreamResource> exportAgencesBulk(
+            @RequestParam(required = false) String etablissementCode,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        AgenceExcelExportDto response = bankingService.exportAgencesToExcel(etablissementCode);
+        InputStreamResource file = new InputStreamResource(response.stream());
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + response.fileName())
+                .contentType(
+                        MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(file);
+    }
+
     // status de compte routes
 
     // create account-status
@@ -415,7 +451,7 @@ public class BankingController {
         }
     }
 
-     // change account-status status
+    // change account-status status
     @PatchMapping("/account-status/{code}/status")
     public ResponseEntity<ApiResponse<Void>> changeAccountStatus(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code compte doit contenir exactement 2 chiffres") String code,

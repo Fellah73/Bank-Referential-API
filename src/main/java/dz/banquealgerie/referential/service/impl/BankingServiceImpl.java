@@ -1,5 +1,6 @@
 package dz.banquealgerie.referential.service.impl;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -13,11 +14,13 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.util.Streamable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import dz.banquealgerie.referential.domain.dto.banking.accountStatus.AccountStatusDto;
 import dz.banquealgerie.referential.domain.dto.banking.accountStatus.AccountStatusUpdateDto;
 import dz.banquealgerie.referential.domain.dto.banking.agence.AgenceDto;
+import dz.banquealgerie.referential.domain.dto.banking.agence.AgenceExcelExportDto;
 import dz.banquealgerie.referential.domain.dto.banking.agence.AgenceUpdateDto;
 import dz.banquealgerie.referential.domain.dto.banking.etablissement.EtablissementDto;
 import dz.banquealgerie.referential.domain.dto.banking.etablissement.EtablissementUpdateDto;
@@ -33,9 +36,10 @@ import dz.banquealgerie.referential.repositories.banking.AgenceRepository;
 import dz.banquealgerie.referential.repositories.banking.EtablissementRepository;
 import dz.banquealgerie.referential.service.BankingService;
 import dz.banquealgerie.referential.utils.excel.ExcelUtils;
-import dz.banquealgerie.referential.utils.excel.banking.AgenceExcelParser;
-import dz.banquealgerie.referential.utils.excel.banking.EtablissementExcelParser;
-import jakarta.transaction.Transactional;
+import dz.banquealgerie.referential.utils.excel.banking.export.AgenceExcelExport;
+import dz.banquealgerie.referential.utils.excel.banking.export.EtablissementExcelExport;
+import dz.banquealgerie.referential.utils.excel.banking.imports.AgenceExcelParser;
+import dz.banquealgerie.referential.utils.excel.banking.imports.EtablissementExcelParser;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
 
@@ -229,10 +233,6 @@ public class BankingServiceImpl implements BankingService {
 
             for (EtablissementDto dto : etablissementDtos) {
 
-                System.out.println("Processing row " + rowNumber + ": " + dto);
-                System.out.println(
-                        "etablissement " + dto.getCode() + " - " + dto.getAbreviation() + " - " + dto.getLibelle());
-
                 Set<ConstraintViolation<EtablissementDto>> violations = validator.validate(dto);
                 if (!violations.isEmpty()) {
                     String errorMsg = violations.iterator().next().getMessage();
@@ -312,6 +312,21 @@ public class BankingServiceImpl implements BankingService {
         } catch (Exception e) {
             throw new RuntimeException("Erreur lors de l'importation en masse des établissements : " + e.getMessage());
         }
+    }
+
+    // etablissement bulk-export
+    @Override
+    @Transactional(readOnly = true)
+    public ByteArrayInputStream exportEtablissementsToExcel() {
+
+        try {
+            List<EtablissementEntity> etablissementEntities = etablissementRepository.findAll();
+
+            return EtablissementExcelExport.exportEtablissementsToExcel(etablissementEntities);
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors de l'exportation des ÉTABLISSEMENTS : " + e.getMessage());
+        }
+
     }
 
     // agence methods
@@ -504,6 +519,43 @@ public class BankingServiceImpl implements BankingService {
                 .errorCount(errors.size())
                 .errors(errors)
                 .build();
+    }
+
+    // agence bulk-export
+    @Override
+    @Transactional(readOnly = true)
+    public AgenceExcelExportDto exportAgencesToExcel(String etablissementCode) {
+        List<AgenceEntity> entities;
+        String fileName;
+        try {
+
+            if (etablissementCode != null && !etablissementCode.trim().isEmpty()) {
+                EtablissementEntity etablissement = etablissementRepository.findByCode(etablissementCode);
+
+                if (etablissement == null) {
+                    throw new RuntimeException("Etablissement with code " + etablissementCode + " does not exist");
+                }
+
+                entities = agenceRepository.findByEtablissementCode(etablissementCode);
+
+                String etabIdentifier = (etablissement.getAbreviation() != null
+                        && !etablissement.getAbreviation().isBlank())
+                                ? etablissement.getAbreviation()
+                                : etablissementCode;
+
+                fileName = "agences_" + etabIdentifier + ".xlsx";
+
+            } else {
+                entities = agenceRepository.findAll();
+                fileName = "agences_global.xlsx";
+            }
+
+            ByteArrayInputStream stream = AgenceExcelExport.exportAgencesToExcel(entities);
+            return new AgenceExcelExportDto(stream, fileName);
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors de l'exportation des AGENCES : " + e.getMessage());
+        }
+
     }
 
     // account-status methods

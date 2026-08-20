@@ -1,4 +1,4 @@
-package dz.banquealgerie.referential.utils.excel.referentiel;
+package dz.banquealgerie.referential.utils.excel.geographical.imports;
 
 import java.io.InputStream;
 import java.util.ArrayList;

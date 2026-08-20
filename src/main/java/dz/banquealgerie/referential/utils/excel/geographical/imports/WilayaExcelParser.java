@@ -1,4 +1,4 @@
-package dz.banquealgerie.referential.utils.excel.referentiel;
+package dz.banquealgerie.referential.utils.excel.geographical.imports;
 
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -10,21 +10,21 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-import dz.banquealgerie.referential.domain.dto.geographic.pays.PaysDto;
+import dz.banquealgerie.referential.domain.dto.geographic.wilaya.WilayaDto;
 import dz.banquealgerie.referential.utils.excel.ExcelUtils;
 
-public class PaysExcelParser {
-    public static List<PaysDto> parse(InputStream is) {
+public class WilayaExcelParser {
+    public static List<WilayaDto> parse(InputStream is) {
         try (Workbook workbook = new XSSFWorkbook(is)) {
             Sheet sheet = workbook.getSheetAt(0);
             Iterator<Row> rows = sheet.iterator();
-            List<PaysDto> paysList = new ArrayList<>();
+            List<WilayaDto> wilayas = new ArrayList<>();
 
             int rowNumber = 0;
             while (rows.hasNext()) {
                 Row currentRow = rows.next();
 
-                if (rowNumber == 0) {
+                if (rowNumber == 0) { 
                     rowNumber++;
                     continue;
                 }
@@ -33,17 +33,17 @@ public class PaysExcelParser {
                     continue;
                 }
 
-                PaysDto pays = new PaysDto();
-                pays.setCode(ExcelUtils.getCellValueAsString(currentRow.getCell(0)));
-                pays.setLibelle(ExcelUtils.getCellValueAsString(currentRow.getCell(1)));
-                pays.setAbreviation(ExcelUtils.getCellValueAsString(currentRow.getCell(2)));
+                WilayaDto wilaya = new WilayaDto();
+                wilaya.setCode(ExcelUtils.getCellValueAsString(currentRow.getCell(0)));
+                wilaya.setLibelle(ExcelUtils.getCellValueAsString(currentRow.getCell(1)));
+                wilaya.setLibelleAr(ExcelUtils.getCellValueAsString(currentRow.getCell(2)));
 
-                paysList.add(pays);
+                wilayas.add(wilaya);
             }
 
-            return paysList;
+            return wilayas;
         } catch (Exception e) {
-            throw new RuntimeException("Erreur lors de la lecture du fichier Excel des pays : " + e.getMessage());
+            throw new RuntimeException("Erreur lors de la lecture du fichier Excel des wilayas : " + e.getMessage());
         }
     }
 }

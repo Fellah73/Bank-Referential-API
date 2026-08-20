@@ -1,5 +1,7 @@
 package dz.banquealgerie.referential.service;
 
+import java.io.ByteArrayInputStream;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
@@ -7,6 +9,7 @@ import org.springframework.web.multipart.MultipartFile;
 import dz.banquealgerie.referential.domain.dto.banking.accountStatus.AccountStatusDto;
 import dz.banquealgerie.referential.domain.dto.banking.accountStatus.AccountStatusUpdateDto;
 import dz.banquealgerie.referential.domain.dto.banking.agence.AgenceDto;
+import dz.banquealgerie.referential.domain.dto.banking.agence.AgenceExcelExportDto;
 import dz.banquealgerie.referential.domain.dto.banking.agence.AgenceUpdateDto;
 import dz.banquealgerie.referential.domain.dto.banking.etablissement.EtablissementDto;
 import dz.banquealgerie.referential.domain.dto.banking.etablissement.EtablissementUpdateDto;
@@ -31,6 +34,8 @@ public interface BankingService {
 
     BulkImportResponseDto importEtablissementsBulk(MultipartFile file, UserEntity currentUser, boolean updateIfExists);
 
+    ByteArrayInputStream exportEtablissementsToExcel();
+
     // agence methods
     AgenceDto createAgence(String etablissementCode, AgenceDto agenceToCreateDTO, UserEntity currentUser);
 
@@ -42,6 +47,8 @@ public interface BankingService {
     void changeAgenceStatus(String agenceCode, UserEntity currentUser);
 
     BulkImportResponseDto importAgencesBulk(MultipartFile file, UserEntity currentUser, boolean updateIfExists);
+
+    AgenceExcelExportDto exportAgencesToExcel(String etablissementCode);
 
     // account-status methods
     AccountStatusDto createAccountStatus(AccountStatusDto accountStatusToCreateDTO, UserEntity currentUser);

@@ -1,4 +1,4 @@
-package dz.banquealgerie.referential.domain.dto.regulatory;
+package dz.banquealgerie.referential.domain.dto.regulatory.activity;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;

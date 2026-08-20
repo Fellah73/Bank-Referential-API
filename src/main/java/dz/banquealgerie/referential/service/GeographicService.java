@@ -1,5 +1,7 @@
 package dz.banquealgerie.referential.service;
 
+import java.io.ByteArrayInputStream;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
@@ -31,6 +33,8 @@ public interface GeographicService {
 
     BulkImportResponseDto importPaysBulk(MultipartFile file, UserEntity currentUser, boolean updateIfExists);
 
+    ByteArrayInputStream exportPaysToExcel();
+
     // wilaya methods
     WilayaEntity createWilaya(WilayaDto wilaya, UserEntity currentUser);
 
@@ -46,6 +50,8 @@ public interface GeographicService {
 
     BulkImportResponseDto importWilayasBulk(MultipartFile file, UserEntity currentUser, boolean updateIfExists);
 
+    ByteArrayInputStream exportWilayasToExcel();
+
     // commune methods
     void createCommune(String code, CommuneDto commune, UserEntity currentUser);
 
@@ -57,4 +63,5 @@ public interface GeographicService {
 
     BulkImportResponseDto importCommunesBulk(MultipartFile file, UserEntity currentUser, boolean updateIfExists);
 
+    ByteArrayInputStream exportCommunesToExcel();
 }

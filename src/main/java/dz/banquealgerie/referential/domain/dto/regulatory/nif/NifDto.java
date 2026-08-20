@@ -1,4 +1,4 @@
-package dz.banquealgerie.referential.domain.dto.regulatory;
+package dz.banquealgerie.referential.domain.dto.regulatory.nif;
 
 import java.time.LocalDate;
 

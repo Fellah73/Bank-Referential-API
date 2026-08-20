@@ -17,7 +17,7 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Component;
 
-import dz.banquealgerie.referential.domain.dto.regulatory.NifResponseDto;
+import dz.banquealgerie.referential.domain.dto.regulatory.nif.NifResponseDto;
 
 @Component
 public class NifExcelExporter {

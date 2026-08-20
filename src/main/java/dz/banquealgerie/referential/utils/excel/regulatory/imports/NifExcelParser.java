@@ -19,7 +19,7 @@ import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Component;
 
-import dz.banquealgerie.referential.domain.dto.regulatory.NifDto;
+import dz.banquealgerie.referential.domain.dto.regulatory.nif.NifDto;
 import dz.banquealgerie.referential.utils.excel.ExcelUtils;
 import lombok.extern.slf4j.Slf4j;
 

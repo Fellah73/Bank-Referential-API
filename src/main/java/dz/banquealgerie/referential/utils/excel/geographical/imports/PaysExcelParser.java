@@ -1,4 +1,4 @@
-package dz.banquealgerie.referential.utils.excel.banking;
+package dz.banquealgerie.referential.utils.excel.geographical.imports;
 
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -10,21 +10,21 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-import dz.banquealgerie.referential.domain.dto.banking.agence.AgenceDto;
+import dz.banquealgerie.referential.domain.dto.geographic.pays.PaysDto;
 import dz.banquealgerie.referential.utils.excel.ExcelUtils;
 
-public class AgenceExcelParser {
-    public static List<AgenceDto> parse(InputStream is) {
+public class PaysExcelParser {
+    public static List<PaysDto> parse(InputStream is) {
         try (Workbook workbook = new XSSFWorkbook(is)) {
             Sheet sheet = workbook.getSheetAt(0);
             Iterator<Row> rows = sheet.iterator();
-            List<AgenceDto> agences = new ArrayList<>();
+            List<PaysDto> paysList = new ArrayList<>();
 
             int rowNumber = 0;
             while (rows.hasNext()) {
                 Row currentRow = rows.next();
 
-                if (rowNumber == 0) { 
+                if (rowNumber == 0) {
                     rowNumber++;
                     continue;
                 }
@@ -33,17 +33,17 @@ public class AgenceExcelParser {
                     continue;
                 }
 
-                AgenceDto agence = new AgenceDto();
-                agence.setCode(ExcelUtils.getCellValueAsString(currentRow.getCell(0)));
-                agence.setLibelle(ExcelUtils.getCellValueAsString(currentRow.getCell(1)));
-                agence.setEtablissementCode(ExcelUtils.getCellValueAsString(currentRow.getCell(2)));
+                PaysDto pays = new PaysDto();
+                pays.setCode(ExcelUtils.getCellValueAsString(currentRow.getCell(0)));
+                pays.setLibelle(ExcelUtils.getCellValueAsString(currentRow.getCell(1)));
+                pays.setAbreviation(ExcelUtils.getCellValueAsString(currentRow.getCell(2)));
 
-                agences.add(agence);
+                paysList.add(pays);
             }
 
-            return agences;
+            return paysList;
         } catch (Exception e) {
-            throw new RuntimeException("Erreur lors de la lecture du fichier Excel des agences : " + e.getMessage());
+            throw new RuntimeException("Erreur lors de la lecture du fichier Excel des pays : " + e.getMessage());
         }
     }
 }

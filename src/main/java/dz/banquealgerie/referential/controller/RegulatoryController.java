@@ -2,12 +2,12 @@ package dz.banquealgerie.referential.controller;
 
 import java.io.ByteArrayInputStream;
 
-import org.apache.tomcat.util.file.ConfigurationSource.Resource;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -25,20 +25,18 @@ import org.springframework.web.multipart.MultipartFile;
 
 import dz.banquealgerie.referential.domain.dto.ApiResponse;
 import dz.banquealgerie.referential.domain.dto.geographic.BulkImportResponseDto;
-import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneDto;
-import dz.banquealgerie.referential.domain.dto.regulatory.ActivityDto;
-import dz.banquealgerie.referential.domain.dto.regulatory.ActivityUpdateDto;
-import dz.banquealgerie.referential.domain.dto.regulatory.FormeJuridiqueDto;
-import dz.banquealgerie.referential.domain.dto.regulatory.FormeJuridiqueUpdateDto;
-import dz.banquealgerie.referential.domain.dto.regulatory.NifDto;
-import dz.banquealgerie.referential.domain.dto.regulatory.NifResponseDto;
-import dz.banquealgerie.referential.domain.dto.regulatory.NifUpdateDto;
+import dz.banquealgerie.referential.domain.dto.regulatory.activity.ActivityDto;
+import dz.banquealgerie.referential.domain.dto.regulatory.activity.ActivityUpdateDto;
+import dz.banquealgerie.referential.domain.dto.regulatory.formeJuridique.FormeJuridiqueDto;
+import dz.banquealgerie.referential.domain.dto.regulatory.formeJuridique.FormeJuridiqueUpdateDto;
+import dz.banquealgerie.referential.domain.dto.regulatory.nif.NifDto;
+import dz.banquealgerie.referential.domain.dto.regulatory.nif.NifResponseDto;
+import dz.banquealgerie.referential.domain.dto.regulatory.nif.NifUpdateDto;
 import dz.banquealgerie.referential.domain.entities.UserEntity;
 import dz.banquealgerie.referential.service.RegulatoryService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
 
 @RestController
 @RequestMapping("/regulatory")
