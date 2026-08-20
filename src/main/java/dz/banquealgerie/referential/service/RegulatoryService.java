@@ -1,8 +1,12 @@
 package dz.banquealgerie.referential.service;
 
+import java.io.ByteArrayInputStream;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.web.multipart.MultipartFile;
 
+import dz.banquealgerie.referential.domain.dto.geographic.BulkImportResponseDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.ActivityDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.ActivityUpdateDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.FormeJuridiqueDto;
@@ -40,4 +44,8 @@ public interface RegulatoryService {
     NifResponseDto updateNif(String code, NifUpdateDto nifToUpdateDTO, UserEntity currentUser);
 
     void changeNifStatus(String code, UserEntity currentUser);
+
+    BulkImportResponseDto importNifsBulk(MultipartFile file, UserEntity currentUser, boolean updateIfExists);
+
+    ByteArrayInputStream exportNifsToExcel();
 }

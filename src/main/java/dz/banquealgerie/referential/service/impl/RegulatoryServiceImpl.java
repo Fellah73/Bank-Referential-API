@@ -1,11 +1,21 @@
 package dz.banquealgerie.referential.service.impl;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
-import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneDto;
+import dz.banquealgerie.referential.domain.dto.geographic.BulkImportResponseDto;
+import dz.banquealgerie.referential.domain.dto.geographic.ImportErrorDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.ActivityDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.ActivityUpdateDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.FormeJuridiqueDto;
@@ -14,8 +24,6 @@ import dz.banquealgerie.referential.domain.dto.regulatory.NifDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.NifResponseDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.NifUpdateDto;
 import dz.banquealgerie.referential.domain.entities.UserEntity;
-import dz.banquealgerie.referential.domain.entities.geographic.CommuneEntity;
-import dz.banquealgerie.referential.domain.entities.geographic.WilayaEntity;
 import dz.banquealgerie.referential.domain.entities.regulatory.ActivityEntity;
 import dz.banquealgerie.referential.domain.entities.regulatory.FormeJuridiqueEntity;
 import dz.banquealgerie.referential.domain.entities.regulatory.NifEntity;
@@ -24,6 +32,11 @@ import dz.banquealgerie.referential.repositories.regulatory.ActivityRepository;
 import dz.banquealgerie.referential.repositories.regulatory.FormJuridiqueRepository;
 import dz.banquealgerie.referential.repositories.regulatory.NifRepository;
 import dz.banquealgerie.referential.service.RegulatoryService;
+import dz.banquealgerie.referential.utils.excel.ExcelUtils;
+import dz.banquealgerie.referential.utils.excel.regulatory.export.NifExcelExporter;
+import dz.banquealgerie.referential.utils.excel.regulatory.imports.NifExcelParser;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 
 @Service
 public class RegulatoryServiceImpl implements RegulatoryService {
@@ -33,12 +46,15 @@ public class RegulatoryServiceImpl implements RegulatoryService {
     private final ActivityRepository activityRepository;
     private final NifRepository nifRepository;
 
+    private final Validator validator;
+
     public RegulatoryServiceImpl(FormJuridiqueRepository formJuridiqueRepository, RegulatoryMapper regulatoryMapper,
-            ActivityRepository activityRepository, NifRepository nifRepository) {
+            ActivityRepository activityRepository, NifRepository nifRepository, Validator validator) {
         this.formJuridiqueRepository = formJuridiqueRepository;
         this.regulatoryMapper = regulatoryMapper;
         this.activityRepository = activityRepository;
         this.nifRepository = nifRepository;
+        this.validator = validator;
     }
 
     // form-juridique methods
@@ -346,4 +362,141 @@ public class RegulatoryServiceImpl implements RegulatoryService {
         }
     }
 
+    // nif bulk-import
+    @Override
+    @Transactional
+    public BulkImportResponseDto importNifsBulk(MultipartFile file, UserEntity currentUser,
+            boolean updateIfExists) {
+
+        if (!ExcelUtils.hasExcelFormat(file)) {
+            throw new IllegalArgumentException("Le fichier doit être au format Excel (.xlsx)");
+        }
+
+        List<NifDto> nifDtos;
+        try {
+            nifDtos = NifExcelParser.parse(file.getInputStream());
+        } catch (IOException e) {
+            throw new RuntimeException("Erreur lors de la lecture du fichier Excel : " + e.getMessage());
+        }
+
+        List<ImportErrorDto> errors = new ArrayList<>();
+        Set<String> processedNifs = new HashSet<>();
+        Set<String> processedRc = new HashSet<>();
+
+        int successCount = 0;
+        int rowNumber = 2;
+        String username = (currentUser != null) ? currentUser.getUsername() : "SYSTEM";
+
+        for (NifDto dto : nifDtos) {
+
+            Set<ConstraintViolation<NifDto>> violations = validator.validate(dto);
+            if (!violations.isEmpty()) {
+                String errorMsg = violations.iterator().next().getMessage();
+                errors.add(new ImportErrorDto(rowNumber, dto.getNif(), errorMsg));
+                rowNumber++;
+                continue;
+            }
+
+            if (processedNifs.contains(dto.getNif())) {
+                errors.add(new ImportErrorDto(rowNumber, dto.getNif(), "NIF en double dans le même fichier Excel"));
+                rowNumber++;
+                continue;
+            }
+
+            if (processedRc.contains(dto.getRc())) {
+                errors.add(new ImportErrorDto(rowNumber, dto.getRc(), "RC en double dans le même fichier Excel"));
+                rowNumber++;
+                continue;
+            }
+
+            Optional<ActivityEntity> activityOpt = activityRepository.findById(dto.getActivityCode());
+            if (activityOpt.isEmpty()) {
+                errors.add(new ImportErrorDto(rowNumber, dto.getNif(),
+                        "L'activité avec le code [" + dto.getActivityCode() + "] n'existe pas en BDD"));
+                rowNumber++;
+                continue;
+            }
+
+            ActivityEntity activityEntity = activityOpt.get();
+
+            Optional<FormeJuridiqueEntity> formeJuridiqueOpt = formJuridiqueRepository
+                    .findById(dto.getFormeJuridiqueCode());
+            if (formeJuridiqueOpt.isEmpty()) {
+                errors.add(new ImportErrorDto(rowNumber, dto.getNif(),
+                        "La forme juridique avec le code [" + dto.getFormeJuridiqueCode() + "] n'existe pas en BDD"));
+                rowNumber++;
+                continue;
+            }
+
+            FormeJuridiqueEntity formeJuridique = formeJuridiqueOpt.get();
+
+            Optional<NifEntity> existingNifOpt = nifRepository.findById(dto.getNif());
+
+            if (existingNifOpt.isPresent()) {
+                if (!updateIfExists) {
+                    errors.add(
+                            new ImportErrorDto(rowNumber, dto.getNif(), "Le NIF avec ce code existe déjà en BDD"));
+                    rowNumber++;
+                    continue;
+                }
+
+                NifEntity entityToUpdate = existingNifOpt.get();
+                entityToUpdate.setRc(dto.getRc());
+                entityToUpdate.setActivity(activityEntity);
+                entityToUpdate.setDateCreation(dto.getDateCreation());
+                entityToUpdate.setDesignation(dto.getDesignation());
+                entityToUpdate.setFormeJuridique(formeJuridique);
+                entityToUpdate.setIsActive(true);
+                entityToUpdate.setUpdatedBy(username);
+                entityToUpdate.setUpdatedAt(java.time.LocalDateTime.now());
+
+                nifRepository.save(entityToUpdate);
+            } else {
+                NifEntity newEntity = NifEntity.builder()
+                        .nif(dto.getNif())
+                        .rc(dto.getRc())
+                        .activity(activityEntity)
+                        .dateCreation(dto.getDateCreation())
+                        .designation(dto.getDesignation())
+                        .formeJuridique(formeJuridique)
+                        .isActive(true)
+                        .createdBy(username)
+                        .createdAt(java.time.LocalDateTime.now())
+                        .build();
+
+                nifRepository.save(newEntity);
+            }
+
+            processedNifs.add(dto.getNif());
+            processedRc.add(dto.getRc());
+            successCount++;
+            rowNumber++;
+        }
+
+        return BulkImportResponseDto.builder()
+                .totalRows(nifDtos.size())
+                .successCount(successCount)
+                .errorCount(errors.size())
+                .errors(errors)
+                .build();
+    }
+
+    // nif bulk-export
+    @Override
+    @Transactional(readOnly = true)
+    public ByteArrayInputStream exportNifsToExcel() {
+
+        try {
+            List<NifEntity> nifEntities = nifRepository.findAllWithRelations();
+
+            List<NifResponseDto> nifDtos = nifEntities.stream()
+                    .map(regulatoryMapper::toNifResponseDto)
+                    .toList();
+
+            return NifExcelExporter.exportNifsToExcel(nifDtos);
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors de l'exportation des NIF : " + e.getMessage());
+        }
+
+    }
 }
