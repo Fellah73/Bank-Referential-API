@@ -34,6 +34,7 @@ import dz.banquealgerie.referential.domain.dto.banking.etablissement.Etablisseme
 import dz.banquealgerie.referential.domain.dto.geographic.BulkImportResponseDto;
 import dz.banquealgerie.referential.domain.entities.UserEntity;
 import dz.banquealgerie.referential.service.BankingService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
@@ -49,6 +50,7 @@ public class BankingController {
 
     // create etablissement
     @PostMapping("/etablissement")
+    @Tag(name = "4. Référentiel Bancaire - Etablissements", description = "Gestion du référentiel des établissements")
     public ResponseEntity<ApiResponse<EtablissementDto>> createEtablissement(
             @Valid @RequestBody EtablissementDto etablissementToCreateDTO,
             @AuthenticationPrincipal UserEntity currentUser) {
@@ -74,6 +76,7 @@ public class BankingController {
 
     // get all etablissement with pagination
     @GetMapping("/etablissement")
+    @Tag(name = "4. Référentiel Bancaire - Etablissements", description = "Gestion du référentiel des établissements")
     public ResponseEntity<ApiResponse<Page<EtablissementDto>>> getAllEtablissement(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         try {
@@ -97,6 +100,7 @@ public class BankingController {
 
     // get etablissement by code
     @GetMapping("/etablissement/{code}")
+    @Tag(name = "4. Référentiel Bancaire - Etablissements", description = "Gestion du référentiel des établissements")
     public ResponseEntity<ApiResponse<EtablissementDto>> getEtablissementByCode(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{3}$", message = "Le code etablissement doit contenir exactement 3 chiffres") String code) {
         try {
@@ -119,6 +123,7 @@ public class BankingController {
 
     // update etablissement
     @PatchMapping("/etablissement/{code}")
+    @Tag(name = "4. Référentiel Bancaire - Etablissements", description = "Gestion du référentiel des établissements")
     public ResponseEntity<ApiResponse<EtablissementDto>> updateEtablissement(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{3}$", message = "Le code etbalissement doit contenir exactement 3 chiffres") String code,
             @RequestBody EtablissementUpdateDto etablissementToUpdateDTO,
@@ -145,6 +150,7 @@ public class BankingController {
 
     // change etablissement status
     @PatchMapping("/etablissement/{code}/status")
+    @Tag(name = "4. Référentiel Bancaire - Etablissements", description = "Gestion du référentiel des établissements")
     public ResponseEntity<ApiResponse<Void>> changeEtablissementStatus(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{3}$", message = "Le code etablissement doit contenir exactement 3 chiffres") String code,
             @AuthenticationPrincipal UserEntity currentUser) {
@@ -168,6 +174,7 @@ public class BankingController {
 
     // search etablissements by abreviation or libelle
     @GetMapping("/etablissement/search")
+    @Tag(name = "4. Référentiel Bancaire - Etablissements", description = "Gestion du référentiel des établissements")
     public ResponseEntity<ApiResponse<Page<EtablissementDto>>> searchEtablissements(
             @RequestParam(required = false) String searchTerm,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -192,6 +199,7 @@ public class BankingController {
 
     // bulk import etablissements
     @PostMapping(value = "/etablissement/bulk-import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Tag(name = "4. Référentiel Bancaire - Etablissements", description = "Gestion du référentiel des établissements")
     public ResponseEntity<ApiResponse<BulkImportResponseDto>> importEtablissementsBulk(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "updateIfExists", defaultValue = "false") boolean updateIfExists,
@@ -218,6 +226,7 @@ public class BankingController {
 
     // export etablissements
     @GetMapping("/etablissement/bulk-export")
+    @Tag(name = "4. Référentiel Bancaire - Etablissements", description = "Gestion du référentiel des établissements")
     public ResponseEntity<InputStreamResource> exportEtablissementsBulk(
             @AuthenticationPrincipal UserEntity currentUser) {
 
@@ -235,6 +244,7 @@ public class BankingController {
 
     // create agence
     @PostMapping("/etablissement/{etablissementCode}/agence")
+    @Tag(name = "5. Référentiel Bancaire - Agences", description = "Gestion du référentiel des agences")
     public ResponseEntity<ApiResponse<AgenceDto>> createAgence(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{3}$", message = "Le code établissement doit contenir exactement 3 chiffres") String etablissementCode,
             @Valid @RequestBody AgenceDto agenceToCreateDTO,
@@ -262,6 +272,7 @@ public class BankingController {
 
     // get agences by etablissement code
     @GetMapping("/etablissement/{etablissementCode}/agence")
+    @Tag(name = "5. Référentiel Bancaire - Agences", description = "Gestion du référentiel des agences")
     public ResponseEntity<ApiResponse<Page<AgenceDto>>> getAgencesByEtablissementCode(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{3}$", message = "Le code établissement doit contenir exactement 3 chiffres") String etablissementCode,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -285,6 +296,7 @@ public class BankingController {
 
     // update agence
     @PatchMapping("/etablissement/{etablissementCode}/agence/{agenceCode}")
+    @Tag(name = "5. Référentiel Bancaire - Agences", description = "Gestion du référentiel des agences")
     public ResponseEntity<ApiResponse<AgenceDto>> updateAgence(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{3}$", message = "Le code établissement doit contenir exactement 3 chiffres") String etablissementCode,
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{3,20}$", message = "Le code agence doit contenir entre 3 et 20 chiffres") String agenceCode,
@@ -312,6 +324,7 @@ public class BankingController {
 
     // change agence status
     @PatchMapping("/agence/{agenceCode}/status")
+    @Tag(name = "5. Référentiel Bancaire - Agences", description = "Gestion du référentiel des agences")
     public ResponseEntity<ApiResponse<Void>> changeAgenceStatus(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{3,20}$", message = "Le code agence doit contenir entre 3 et 20 chiffres") String agenceCode,
             @AuthenticationPrincipal UserEntity currentUser) {
@@ -335,6 +348,7 @@ public class BankingController {
 
     // agences bulk-import
     @PostMapping(value = "/agence/bulk-import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Tag(name = "5. Référentiel Bancaire - Agences", description = "Gestion du référentiel des agences")
     public ResponseEntity<ApiResponse<BulkImportResponseDto>> importAgencesBulk(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "updateIfExists", defaultValue = "false") boolean updateIfExists,
@@ -361,6 +375,7 @@ public class BankingController {
 
     // export agences
     @GetMapping("/agence/bulk-export")
+    @Tag(name = "5. Référentiel Bancaire - Agences", description = "Gestion du référentiel des agences")
     public ResponseEntity<InputStreamResource> exportAgencesBulk(
             @RequestParam(required = false) String etablissementCode,
             @AuthenticationPrincipal UserEntity currentUser) {
@@ -379,6 +394,7 @@ public class BankingController {
 
     // create account-status
     @PostMapping("/account-status")
+    @Tag(name = "6. Référentiel Bancaire - Statuts de Compte", description = "Gestion du référentiel des statuts de compte")
     public ResponseEntity<ApiResponse<AccountStatusDto>> createAccountStatus(
             @Valid @RequestBody AccountStatusDto accountStatusToCreateDTO,
             @AuthenticationPrincipal UserEntity currentUser) {
@@ -404,6 +420,7 @@ public class BankingController {
 
     // get all account statuses with pagination
     @GetMapping("/account-status")
+    @Tag(name = "6. Référentiel Bancaire - Statuts de Compte", description = "Gestion du référentiel des statuts de compte")
     public ResponseEntity<ApiResponse<Page<AccountStatusDto>>> getAllAccountStatuses(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         try {
@@ -427,6 +444,7 @@ public class BankingController {
 
     // update account-status
     @PatchMapping("/account-status/{code}")
+    @Tag(name = "6. Référentiel Bancaire - Statuts de Compte", description = "Gestion du référentiel des statuts de compte")
     public ResponseEntity<ApiResponse<AccountStatusDto>> updateAccountStatus(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code compte doit contenir exactement 2 chiffres") String code,
             @Valid @RequestBody AccountStatusUpdateDto accountStatusToUpdateDTO,
@@ -453,6 +471,7 @@ public class BankingController {
 
     // change account-status status
     @PatchMapping("/account-status/{code}/status")
+    @Tag(name = "6. Référentiel Bancaire - Statuts de Compte", description = "Gestion du référentiel des statuts de compte")
     public ResponseEntity<ApiResponse<Void>> changeAccountStatus(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code compte doit contenir exactement 2 chiffres") String code,
             @AuthenticationPrincipal UserEntity currentUser) {

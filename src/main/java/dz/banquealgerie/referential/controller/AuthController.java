@@ -12,7 +12,7 @@ import dz.banquealgerie.referential.domain.dto.auth.LoginDto;
 import dz.banquealgerie.referential.domain.entities.UserEntity;
 import dz.banquealgerie.referential.mappers.AuthMapper;
 import dz.banquealgerie.referential.service.AuthService;
-
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -28,6 +28,7 @@ public class AuthController {
 
     // login route
     @PostMapping(path = "/login")
+    @Tag(name = "0. Authentification", description = "Gestion de l'authentification des utilisateurs")
     public ResponseEntity<ApiResponse<String>> login(@RequestBody LoginDto loginDto, HttpServletResponse response) {
         try {
             UserEntity userEntity = authMapper.toEntity(loginDto);
@@ -61,6 +62,7 @@ public class AuthController {
 
     // me route
     @GetMapping(path = "/me")
+    @Tag(name = "0. Authentification", description = "Gestion de l'authentification des utilisateurs")
     public ResponseEntity<?> getMe(HttpServletRequest request) {
         String email = (String) request.getAttribute("userEmail");
         try {
@@ -92,6 +94,7 @@ public class AuthController {
 
     // logout route
     @PostMapping(path = "/logout")
+    @Tag(name = "0. Authentification", description = "Gestion de l'authentification des utilisateurs")
     public ResponseEntity<ApiResponse<String>> logout(HttpServletResponse response) {
         try {
             Cookie cookie = new Cookie("authToken", null);

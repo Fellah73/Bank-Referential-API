@@ -34,6 +34,7 @@ import dz.banquealgerie.referential.domain.dto.regulatory.nif.NifResponseDto;
 import dz.banquealgerie.referential.domain.dto.regulatory.nif.NifUpdateDto;
 import dz.banquealgerie.referential.domain.entities.UserEntity;
 import dz.banquealgerie.referential.service.RegulatoryService;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
@@ -49,6 +50,7 @@ public class RegulatoryController {
 
     // create legal form
     @PostMapping("/legal-forms")
+    @Tag(name = "7. Référentiel Réglementaire - Formes Juridiques", description = "Gestion du référentiel des formes juridiques")
     public ResponseEntity<ApiResponse<FormeJuridiqueDto>> createLegalForm(
             @Valid @RequestBody FormeJuridiqueDto formeJuridiqueDto,
             @AuthenticationPrincipal UserEntity currentUser) {
@@ -74,6 +76,7 @@ public class RegulatoryController {
 
     // get all legal forms with pagination
     @GetMapping("/legal-forms")
+    @Tag(name = "7. Référentiel Réglementaire - Formes Juridiques", description = "Gestion du référentiel des formes juridiques")
     public ResponseEntity<ApiResponse<Page<FormeJuridiqueDto>>> getAllLegalForms(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         try {
@@ -97,6 +100,7 @@ public class RegulatoryController {
 
     // update legal-form
     @PatchMapping("/legal-forms/{code}")
+    @Tag(name = "7. Référentiel Réglementaire - Formes Juridiques", description = "Gestion du référentiel des formes juridiques")
     public ResponseEntity<ApiResponse<FormeJuridiqueDto>> updateLegalForm(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code forme juridique doit contenir exactement 2 chiffres") String code,
             @Valid @RequestBody FormeJuridiqueUpdateDto formeJuridiqueToUpdateDTO,
@@ -124,6 +128,7 @@ public class RegulatoryController {
 
     // change legal-form status
     @PatchMapping("/legal-forms/{code}/status")
+    @Tag(name = "7. Référentiel Réglementaire - Formes Juridiques", description = "Gestion du référentiel des formes juridiques")
     public ResponseEntity<ApiResponse<Void>> changeLegalFormStatus(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code forme juridique doit contenir exactement 2 chiffres") String code,
             @AuthenticationPrincipal UserEntity currentUser) {
@@ -150,6 +155,7 @@ public class RegulatoryController {
 
     // create activity
     @PostMapping("/activities")
+    @Tag(name = "8. Référentiel Réglementaire - Activités", description = "Gestion du référentiel des activités")
     public ResponseEntity<ApiResponse<ActivityDto>> createActivity(
             @Valid @RequestBody ActivityDto activityToCreateDTO,
             @AuthenticationPrincipal UserEntity currentUser) {
@@ -175,6 +181,7 @@ public class RegulatoryController {
 
     // get all activities with pagination
     @GetMapping("/activities")
+    @Tag(name = "8. Référentiel Réglementaire - Activités", description = "Gestion du référentiel des activités")
     public ResponseEntity<ApiResponse<Page<ActivityDto>>> getAllActivities(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         try {
@@ -198,6 +205,7 @@ public class RegulatoryController {
 
     // update activities
     @PatchMapping("/activities/{code}")
+    @Tag(name = "8. Référentiel Réglementaire - Activités", description = "Gestion du référentiel des activités")
     public ResponseEntity<ApiResponse<ActivityDto>> updateActivity(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{6}$", message = "Le code activité doit contenir exactement 6 chiffres") String code,
             @Valid @RequestBody ActivityUpdateDto activityToUpdateDTO,
@@ -223,6 +231,7 @@ public class RegulatoryController {
 
     // change activity status
     @PatchMapping("/activities/{code}/status")
+    @Tag(name = "8. Référentiel Réglementaire - Activités", description = "Gestion du référentiel des activités")
     public ResponseEntity<ApiResponse<Void>> changeActivityStatus(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{6}$", message = "Le code activité doit contenir exactement 6 chiffres") String code,
             @AuthenticationPrincipal UserEntity currentUser) {
@@ -248,6 +257,7 @@ public class RegulatoryController {
 
     // create nif
     @PostMapping("/nif")
+    @Tag(name = "9. Référentiel Réglementaire - NIF", description = "Gestion du référentiel des NIF")
     public ResponseEntity<ApiResponse<NifDto>> createNif(
             @Valid @RequestBody NifDto nifToCreateDTO,
             @AuthenticationPrincipal UserEntity currentUser) {
@@ -273,6 +283,7 @@ public class RegulatoryController {
 
     // get all nif with pagination
     @GetMapping("/nif")
+    @Tag(name = "9. Référentiel Réglementaire - NIF", description = "Gestion du référentiel des NIF")
     public ResponseEntity<ApiResponse<Page<NifResponseDto>>> getAllNifs(
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
         try {
@@ -296,6 +307,7 @@ public class RegulatoryController {
 
     // update nif
     @PatchMapping("/nif/{code}")
+    @Tag(name = "9. Référentiel Réglementaire - NIF", description = "Gestion du référentiel des NIF")
     public ResponseEntity<ApiResponse<NifResponseDto>> updateNif(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{15,20}$", message = "Le code NIF doit contenir entre 15 et 20 chiffres") String code,
             @Valid @RequestBody NifUpdateDto nifToUpdateDTO,
@@ -321,6 +333,7 @@ public class RegulatoryController {
 
     // change nif status
     @PatchMapping("/nif/{code}/status")
+    @Tag(name = "9. Référentiel Réglementaire - NIF", description = "Gestion du référentiel des NIF")
     public ResponseEntity<ApiResponse<Void>> changeNifStatus(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{15,20}$", message = "Le code NIF doit contenir entre 15 et 20 chiffres") String code,
             @AuthenticationPrincipal UserEntity currentUser) {
@@ -344,6 +357,7 @@ public class RegulatoryController {
 
     // nif bulk-import
     @PostMapping(value = "/nif/bulk-import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Tag(name = "9. Référentiel Réglementaire - NIF", description = "Gestion du référentiel des NIF")
     public ResponseEntity<ApiResponse<BulkImportResponseDto>> importNifsBulk(
             @RequestParam("file") MultipartFile file,
             @RequestParam(value = "updateIfExists", defaultValue = "false") boolean updateIfExists,
@@ -370,6 +384,7 @@ public class RegulatoryController {
 
     // nif export
     @GetMapping("/nif/bulk-export")
+    @Tag(name = "9. Référentiel Réglementaire - NIF", description = "Gestion du référentiel des NIF")
     public ResponseEntity<InputStreamResource> exportNifsBulk(
             @AuthenticationPrincipal UserEntity currentUser) {
 
@@ -384,4 +399,3 @@ public class RegulatoryController {
     }
 
 }
-
