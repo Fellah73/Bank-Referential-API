@@ -11,7 +11,7 @@ import lombok.Setter;
 @Setter
 public class WilayaUpdateDto {
     @Nullable
-    @Pattern(regexp = "^[a-zA-Z]{4,100}$", message = "La libellé doit contenir entre 4 et 100 lettres")
+    @Pattern(regexp = "^[\\p{L}\\s'-]{4,100}$", message = "La libellé doit contenir entre 4 et 100 lettres")
     private String libelle;
 
     

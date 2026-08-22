@@ -1,5 +1,6 @@
 package dz.banquealgerie.referential.domain.dto.geographic.pays;
 
+import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -20,5 +21,8 @@ public class PaysDto {
 
     @Pattern(regexp = "^[A-Z]{2}$", message = "L'abréviation doit contenir exactement 2 lettres majuscules")
     private String abreviation;
+
+    @Nullable
+    private Boolean isActive;
 
 }

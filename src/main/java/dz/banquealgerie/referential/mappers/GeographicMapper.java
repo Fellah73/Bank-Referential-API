@@ -35,6 +35,7 @@ public class GeographicMapper {
         dto.setCode(entity.getCode());
         dto.setAbreviation(entity.getAbreviation());
         dto.setLibelle(entity.getLibelle());
+        dto.setIsActive(entity.getIsActive());
 
         return dto;
     }
@@ -57,7 +58,8 @@ public class GeographicMapper {
         dto.setCode(entity.getCode());
         dto.setLibelle(entity.getLibelle());
         dto.setLibelleAr(entity.getLibelleAr());
-
+        dto.setIsActive(entity.getIsActive());
+        
         return dto;
     }
 
@@ -79,6 +81,7 @@ public class GeographicMapper {
         dto.setCode(entity.getCode());
         dto.setLibelle(entity.getLibelle());
         dto.setLibelleAr(entity.getLibelleAr());
+        dto.setWilayaCode(entity.getWilaya().getCode());
 
         return dto;
     }
