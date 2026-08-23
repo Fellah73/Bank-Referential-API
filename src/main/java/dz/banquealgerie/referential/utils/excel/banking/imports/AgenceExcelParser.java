@@ -14,7 +14,7 @@ import dz.banquealgerie.referential.domain.dto.banking.agence.AgenceDto;
 import dz.banquealgerie.referential.utils.excel.ExcelUtils;
 
 public class AgenceExcelParser {
-    public static List<AgenceDto> parse(InputStream is) {
+    public static List<AgenceDto> parse(InputStream is, Boolean isEtablissementCodeProvided) {
         try (Workbook workbook = new XSSFWorkbook(is)) {
             Sheet sheet = workbook.getSheetAt(0);
             Iterator<Row> rows = sheet.iterator();
@@ -36,7 +36,10 @@ public class AgenceExcelParser {
                 AgenceDto agence = new AgenceDto();
                 agence.setCode(ExcelUtils.getCellValueAsString(currentRow.getCell(0)));
                 agence.setLibelle(ExcelUtils.getCellValueAsString(currentRow.getCell(1)));
-                agence.setEtablissementCode(ExcelUtils.getCellValueAsString(currentRow.getCell(2)));
+              
+                if(isEtablissementCodeProvided) {
+                    agence.setEtablissementCode(ExcelUtils.getCellValueAsString(currentRow.getCell(2)));
+                }
 
                 agences.add(agence);
             }

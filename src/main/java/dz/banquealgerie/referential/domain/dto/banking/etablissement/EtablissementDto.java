@@ -1,5 +1,6 @@
 package dz.banquealgerie.referential.domain.dto.banking.etablissement;
 
+import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
@@ -25,5 +26,8 @@ public class EtablissementDto {
     @NotBlank(message = "Le libellé est obligatoire")
     @Size(min = 3, max = 150, message = "Le libellé doit contenir entre 3 et 150 caractères")
     private String libelle;
+
+    @Nullable
+    private Boolean isActive;
 
 }

@@ -19,4 +19,8 @@ public class CommuneDto extends CommuneUpdateDto {
     @Nullable
     private String wilayaCode;
 
+    @Nullable
+    private Boolean isActive;
+
+
 }

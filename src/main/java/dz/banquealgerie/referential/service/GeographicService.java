@@ -8,6 +8,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import dz.banquealgerie.referential.domain.dto.geographic.BulkImportResponseDto;
 import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneDto;
+import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneExcelExportDto;
 import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneUpdateDto;
 import dz.banquealgerie.referential.domain.dto.geographic.pays.PaysDto;
 import dz.banquealgerie.referential.domain.dto.geographic.pays.PaysUpdateDto;
@@ -61,7 +62,13 @@ public interface GeographicService {
 
     void changeCommuneStatus(String communeCode, UserEntity currentUser);
 
+    Page<CommuneDto> searchCommunes(String searchTerm, Pageable pageable);
+
     BulkImportResponseDto importCommunesBulk(MultipartFile file, UserEntity currentUser, boolean updateIfExists);
 
+    BulkImportResponseDto importCommunesByWilayaBulk(MultipartFile file, String wilayaCode, UserEntity currentUser, boolean updateIfExists);
+
     ByteArrayInputStream exportCommunesToExcel();
+
+    CommuneExcelExportDto exportCommuneByWilayaToExcel(String wilayaCode);
 }

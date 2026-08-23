@@ -82,6 +82,7 @@ public class GeographicMapper {
         dto.setLibelle(entity.getLibelle());
         dto.setLibelleAr(entity.getLibelleAr());
         dto.setWilayaCode(entity.getWilaya().getCode());
+        dto.setIsActive(entity.getIsActive());
 
         return dto;
     }

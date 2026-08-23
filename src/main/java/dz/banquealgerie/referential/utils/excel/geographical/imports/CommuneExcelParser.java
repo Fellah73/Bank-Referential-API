@@ -6,7 +6,7 @@ import java.util.Iterator;
 import java.util.List;
 
 import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;  
+import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
@@ -14,7 +14,7 @@ import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneDto;
 import dz.banquealgerie.referential.utils.excel.ExcelUtils;
 
 public class CommuneExcelParser {
-    public static List<CommuneDto> parse(InputStream is) {
+    public static List<CommuneDto> parse(InputStream is, Boolean wilayaCodeProvided) {
         try (Workbook workbook = new XSSFWorkbook(is)) {
             Sheet sheet = workbook.getSheetAt(0);
             Iterator<Row> rows = sheet.iterator();
@@ -24,7 +24,7 @@ public class CommuneExcelParser {
             while (rows.hasNext()) {
                 Row currentRow = rows.next();
 
-                if (rowNumber == 0) { 
+                if (rowNumber == 0) {
                     rowNumber++;
                     continue;
                 }
@@ -37,8 +37,9 @@ public class CommuneExcelParser {
                 commune.setCode(ExcelUtils.getCellValueAsString(currentRow.getCell(0)));
                 commune.setLibelle(ExcelUtils.getCellValueAsString(currentRow.getCell(1)));
                 commune.setLibelleAr(ExcelUtils.getCellValueAsString(currentRow.getCell(2)));
-                commune.setWilayaCode(ExcelUtils.getCellValueAsString(currentRow.getCell(3)));
-
+                if (wilayaCodeProvided) {
+                    commune.setWilayaCode(ExcelUtils.getCellValueAsString(currentRow.getCell(3)));
+                }
                 communes.add(commune);
             }
 

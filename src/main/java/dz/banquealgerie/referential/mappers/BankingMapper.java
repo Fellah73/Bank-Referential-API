@@ -36,6 +36,7 @@ public class BankingMapper {
         dto.setCode(etablissement.getCode());
         dto.setAbreviation(etablissement.getAbreviation());
         dto.setLibelle(etablissement.getLibelle());
+        dto.setIsActive(etablissement.getIsActive());
 
         return dto;
     }
@@ -56,6 +57,7 @@ public class BankingMapper {
         AgenceDto agenceDto = new AgenceDto();
         agenceDto.setCode(agenceEntity.getCode());
         agenceDto.setLibelle(agenceEntity.getLibelle());
+        agenceDto.setIsActive(agenceEntity.getIsActive());
         return agenceDto;
     }
 

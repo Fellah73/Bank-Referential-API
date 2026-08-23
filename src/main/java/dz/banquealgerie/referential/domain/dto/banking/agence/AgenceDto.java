@@ -17,5 +17,8 @@ public class AgenceDto extends AgenceUpdateDto {
 
     @Nullable
     private String etablissementCode;
+
+    @Nullable
+    private Boolean isActive;
     
 }

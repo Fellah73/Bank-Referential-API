@@ -408,6 +408,35 @@ public class BankingServiceImpl implements BankingService {
         }
     }
 
+    // search agences by libelle or code
+    @Override
+    public Page<AgenceDto> searchAgences(String searchTerm, Pageable pageable) {
+        try {
+            Page<AgenceEntity> agenceList = agenceRepository.findAll(pageable);
+
+            Streamable<AgenceEntity> streamableAgenceList = Streamable.of(agenceList.getContent());
+
+            if (searchTerm != null && !searchTerm.isEmpty()) {
+                streamableAgenceList = streamableAgenceList
+                        .filter(agence -> agence.getLibelle().toLowerCase()
+                                .contains(searchTerm.toLowerCase())
+                                || agence.getCode().toLowerCase().contains(searchTerm.toLowerCase()));
+            }
+            if (streamableAgenceList.isEmpty()) {
+                throw new RuntimeException("No agence found for the given search criteria");
+            }
+
+            agenceList = streamableAgenceList.toList().stream()
+                    .collect(Collectors.collectingAndThen(Collectors.toList(),
+                            list -> new PageImpl<>(list, pageable, list.size())));
+
+            Page<AgenceDto> agenceDtoList = bankingMapper.toAgenceDtoList(agenceList);
+            return agenceDtoList;
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
     // change agence status
     @Override
     public void changeAgenceStatus(String agenceCode, UserEntity currentUser) {
@@ -427,6 +456,95 @@ public class BankingServiceImpl implements BankingService {
         }
     }
 
+    // agence by etablissement bulk-import
+    @Override
+    @Transactional
+    public BulkImportResponseDto importAgencesByEtablissementBulk(MultipartFile file, UserEntity currentUser,
+            boolean updateIfExists, String etablissementCode) {
+
+        Optional<EtablissementEntity> existingEtablissement = etablissementRepository.findById(etablissementCode);
+
+        if (existingEtablissement == null) {
+            throw new RuntimeException("Etablissement with code " + etablissementCode + " does not exist");
+        }
+
+        if (!ExcelUtils.hasExcelFormat(file)) {
+            throw new IllegalArgumentException("Le fichier doit être au format Excel (.xlsx)");
+        }
+
+        List<AgenceDto> agenceDtos;
+        try {
+            agenceDtos = AgenceExcelParser.parse(file.getInputStream(), false);
+        } catch (IOException e) {
+            throw new RuntimeException("Erreur lors de la lecture du fichier Excel : " + e.getMessage());
+        }
+
+        List<ImportErrorDto> errors = new ArrayList<>();
+        Set<String> processedCodes = new HashSet<>();
+
+        int successCount = 0;
+        int rowNumber = 2;
+        String username = (currentUser != null) ? currentUser.getUsername() : "SYSTEM";
+
+        for (AgenceDto dto : agenceDtos) {
+
+            Set<ConstraintViolation<AgenceDto>> violations = validator.validate(dto);
+            if (!violations.isEmpty()) {
+                String errorMsg = violations.iterator().next().getMessage();
+                errors.add(new ImportErrorDto(rowNumber, dto.getCode(), errorMsg));
+                rowNumber++;
+                continue;
+            }
+
+            if (processedCodes.contains(dto.getCode())) {
+                errors.add(new ImportErrorDto(rowNumber, dto.getCode(), "Code en double dans le même fichier Excel"));
+                rowNumber++;
+                continue;
+            }
+
+            Optional<AgenceEntity> existingAgenceOpt = agenceRepository.findById(dto.getCode());
+
+            if (existingAgenceOpt.isPresent()) {
+                if (!updateIfExists) {
+                    errors.add(
+                            new ImportErrorDto(rowNumber, dto.getCode(), "L'agence avec ce code existe déjà en BDD"));
+                    rowNumber++;
+                    continue;
+                }
+
+                AgenceEntity entityToUpdate = existingAgenceOpt.get();
+                entityToUpdate.setLibelle(dto.getLibelle());
+                entityToUpdate.setEtablissement(existingEtablissement.get());
+                entityToUpdate.setUpdatedBy(username);
+                entityToUpdate.setUpdatedAt(java.time.LocalDateTime.now());
+
+                agenceRepository.save(entityToUpdate);
+            } else {
+                AgenceEntity newEntity = AgenceEntity.builder()
+                        .code(dto.getCode())
+                        .libelle(dto.getLibelle())
+                        .etablissement(existingEtablissement.get())
+                        .isActive(true)
+                        .createdBy(username)
+                        .createdAt(java.time.LocalDateTime.now())
+                        .build();
+
+                agenceRepository.save(newEntity);
+            }
+
+            processedCodes.add(dto.getCode());
+            successCount++;
+            rowNumber++;
+        }
+
+        return BulkImportResponseDto.builder()
+                .totalRows(agenceDtos.size())
+                .successCount(successCount)
+                .errorCount(errors.size())
+                .errors(errors)
+                .build();
+    }
+
     // agence bulk-import
     @Override
     @Transactional
@@ -439,7 +557,7 @@ public class BankingServiceImpl implements BankingService {
 
         List<AgenceDto> agenceDtos;
         try {
-            agenceDtos = AgenceExcelParser.parse(file.getInputStream());
+            agenceDtos = AgenceExcelParser.parse(file.getInputStream(), true);
         } catch (IOException e) {
             throw new RuntimeException("Erreur lors de la lecture du fichier Excel : " + e.getMessage());
         }
@@ -521,34 +639,46 @@ public class BankingServiceImpl implements BankingService {
                 .build();
     }
 
-    // agence bulk-export
+    // agence by etablissement bulk-export
     @Override
     @Transactional(readOnly = true)
-    public AgenceExcelExportDto exportAgencesToExcel(String etablissementCode) {
+    public AgenceExcelExportDto exportAgencesByEtablissementToExcel(String etablissementCode) {
         List<AgenceEntity> entities;
         String fileName;
         try {
 
-            if (etablissementCode != null && !etablissementCode.trim().isEmpty()) {
-                EtablissementEntity etablissement = etablissementRepository.findByCode(etablissementCode);
+            EtablissementEntity etablissement = etablissementRepository.findByCode(etablissementCode);
 
-                if (etablissement == null) {
-                    throw new RuntimeException("Etablissement with code " + etablissementCode + " does not exist");
-                }
-
-                entities = agenceRepository.findByEtablissementCode(etablissementCode);
-
-                String etabIdentifier = (etablissement.getAbreviation() != null
-                        && !etablissement.getAbreviation().isBlank())
-                                ? etablissement.getAbreviation()
-                                : etablissementCode;
-
-                fileName = "agences_" + etabIdentifier + ".xlsx";
-
-            } else {
-                entities = agenceRepository.findAll();
-                fileName = "agences_global.xlsx";
+            if (etablissement == null) {
+                throw new RuntimeException("Etablissement with code " + etablissementCode + " does not exist");
             }
+
+            entities = agenceRepository.findByEtablissementCode(etablissementCode);
+
+            String etabIdentifier = (etablissement.getAbreviation() != null
+                    && !etablissement.getAbreviation().isBlank())
+                            ? etablissement.getAbreviation()
+                            : etablissementCode;
+
+            fileName = "agences_" + etabIdentifier + ".xlsx";
+
+            ByteArrayInputStream stream = AgenceExcelExport.exportAgencesToExcel(entities);
+            return new AgenceExcelExportDto(stream, fileName);
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors de l'exportation des AGENCES : " + e.getMessage());
+        }
+
+    }
+
+    // agence bulk-export
+    @Override
+    @Transactional(readOnly = true)
+    public AgenceExcelExportDto exportAgencesToExcel() {
+        List<AgenceEntity> entities;
+        String fileName;
+        try {
+            entities = agenceRepository.findAll();
+            fileName = "agences_global.xlsx";
 
             ByteArrayInputStream stream = AgenceExcelExport.exportAgencesToExcel(entities);
             return new AgenceExcelExportDto(stream, fileName);

@@ -322,6 +322,31 @@ public class BankingController {
         }
     }
 
+    // search agence
+    @GetMapping("/agence/search")
+    @Tag(name = "4. Référentiel Bancaire - Agences", description = "Gestion du référentiel des agences")
+    public ResponseEntity<ApiResponse<Page<AgenceDto>>> searchAgences(
+            @RequestParam(required = false) String searchTerm,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        try {
+            Page<AgenceDto> agenceList = bankingService.searchAgences(searchTerm, pageable);
+
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<Page<AgenceDto>>builder()
+                    .success(true)
+                    .message("Agence list retrieved successfully")
+                    .statusCode(200)
+                    .data(agenceList)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.<Page<AgenceDto>>builder()
+                            .success(false)
+                            .message("Failed to retrieve agence list: " + e.getMessage())
+                            .statusCode(500)
+                            .build());
+        }
+    }
+
     // change agence status
     @PatchMapping("/agence/{agenceCode}/status")
     @Tag(name = "5. Référentiel Bancaire - Agences", description = "Gestion du référentiel des agences")
@@ -343,6 +368,35 @@ public class BankingController {
                     .message("Failed to change agence status: " + e.getMessage())
                     .statusCode(500)
                     .build());
+        }
+    }
+
+    // agences bulk-import by etablissement code
+    @PostMapping(value = "etablissement/{etablissementCode}/agence/bulk-import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Tag(name = "5. Référentiel Bancaire - Agences", description = "Gestion du référentiel des agences")
+    public ResponseEntity<ApiResponse<BulkImportResponseDto>> importAgencesBulk(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "updateIfExists", defaultValue = "false") boolean updateIfExists,
+            @PathVariable("etablissementCode") String etablissementCode,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        try {
+            BulkImportResponseDto response = bankingService.importAgencesByEtablissementBulk(file, currentUser,
+                    updateIfExists, etablissementCode);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.<BulkImportResponseDto>builder()
+                    .success(true)
+                    .message("Importation des agences exécutée")
+                    .statusCode(HttpStatus.CREATED.value())
+                    .data(response)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.<BulkImportResponseDto>builder()
+                            .success(false)
+                            .message("Failed to import agences: " + e.getMessage())
+                            .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                            .build());
         }
     }
 
@@ -373,14 +427,30 @@ public class BankingController {
         }
     }
 
-    // export agences
-    @GetMapping("/agence/bulk-export")
+    // export agences by etablissement
+    @GetMapping("etablissement/{etablissementCode}/agence/bulk-export")
     @Tag(name = "5. Référentiel Bancaire - Agences", description = "Gestion du référentiel des agences")
     public ResponseEntity<InputStreamResource> exportAgencesBulk(
-            @RequestParam(required = false) String etablissementCode,
+            @PathVariable String etablissementCode,
             @AuthenticationPrincipal UserEntity currentUser) {
 
-        AgenceExcelExportDto response = bankingService.exportAgencesToExcel(etablissementCode);
+        AgenceExcelExportDto response = bankingService.exportAgencesByEtablissementToExcel(etablissementCode);
+        InputStreamResource file = new InputStreamResource(response.stream());
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + response.fileName())
+                .contentType(
+                        MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(file);
+    }
+
+    // export agences
+    @GetMapping("agence/bulk-export")
+    @Tag(name = "5. Référentiel Bancaire - Agences", description = "Gestion du référentiel des agences")
+    public ResponseEntity<InputStreamResource> exportAgencesBulk(
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        AgenceExcelExportDto response = bankingService.exportAgencesToExcel();
         InputStreamResource file = new InputStreamResource(response.stream());
 
         return ResponseEntity.ok()

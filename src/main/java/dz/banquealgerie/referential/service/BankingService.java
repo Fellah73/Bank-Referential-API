@@ -18,45 +18,52 @@ import dz.banquealgerie.referential.domain.entities.UserEntity;
 import dz.banquealgerie.referential.domain.entities.banking.EtablissementEntity;
 
 public interface BankingService {
-    // etablissement methods
-    EtablissementEntity createEtablissment(EtablissementDto etablissementDto, UserEntity currentUser);
+        // etablissement methods
+        EtablissementEntity createEtablissment(EtablissementDto etablissementDto, UserEntity currentUser);
 
-    Page<EtablissementDto> getAllEtablissement(Pageable pageable);
+        Page<EtablissementDto> getAllEtablissement(Pageable pageable);
 
-    EtablissementDto getEtablissementByCode(String code);
+        EtablissementDto getEtablissementByCode(String code);
 
-    EtablissementDto updateEtablissement(String code, EtablissementUpdateDto etablissementToUpdateDTO,
-            UserEntity currentUser);
+        EtablissementDto updateEtablissement(String code, EtablissementUpdateDto etablissementToUpdateDTO,
+                        UserEntity currentUser);
 
-    void changeEtablissementStatus(String code, UserEntity currentUser);
+        void changeEtablissementStatus(String code, UserEntity currentUser);
 
-    Page<EtablissementDto> searchEtablissements(String searchTerm, Pageable pageable);
+        Page<EtablissementDto> searchEtablissements(String searchTerm, Pageable pageable);
 
-    BulkImportResponseDto importEtablissementsBulk(MultipartFile file, UserEntity currentUser, boolean updateIfExists);
+        BulkImportResponseDto importEtablissementsBulk(MultipartFile file, UserEntity currentUser,
+                        boolean updateIfExists);
 
-    ByteArrayInputStream exportEtablissementsToExcel();
+        ByteArrayInputStream exportEtablissementsToExcel();
 
-    // agence methods
-    AgenceDto createAgence(String etablissementCode, AgenceDto agenceToCreateDTO, UserEntity currentUser);
+        // agence methods
+        AgenceDto createAgence(String etablissementCode, AgenceDto agenceToCreateDTO, UserEntity currentUser);
 
-    Page<AgenceDto> getAgencesByEtablissementCode(String etablissementCode, Pageable pageable);
+        Page<AgenceDto> getAgencesByEtablissementCode(String etablissementCode, Pageable pageable);
 
-    AgenceDto updateAgence(String etablissementCode, String agenceCode, AgenceUpdateDto agenceToUpdateDTO,
-            UserEntity currentUser);
+        AgenceDto updateAgence(String etablissementCode, String agenceCode, AgenceUpdateDto agenceToUpdateDTO,
+                        UserEntity currentUser);
 
-    void changeAgenceStatus(String agenceCode, UserEntity currentUser);
+        Page<AgenceDto> searchAgences(String searchTerm, Pageable pageable);
 
-    BulkImportResponseDto importAgencesBulk(MultipartFile file, UserEntity currentUser, boolean updateIfExists);
+        void changeAgenceStatus(String agenceCode, UserEntity currentUser);
 
-    AgenceExcelExportDto exportAgencesToExcel(String etablissementCode);
+        BulkImportResponseDto importAgencesByEtablissementBulk(MultipartFile file, UserEntity currentUser, boolean updateIfExists, String etablissementCode);
 
-    // account-status methods
-    AccountStatusDto createAccountStatus(AccountStatusDto accountStatusToCreateDTO, UserEntity currentUser);
+        BulkImportResponseDto importAgencesBulk(MultipartFile file, UserEntity currentUser, boolean updateIfExists);
 
-    Page<AccountStatusDto> getAllAccountStatuses(Pageable pageable);
+        AgenceExcelExportDto exportAgencesByEtablissementToExcel(String etablissementCode);
 
-    AccountStatusDto updateAccountStatus(String code, AccountStatusUpdateDto accountStatusToUpdateDTO,
-            UserEntity currentUser);
+        AgenceExcelExportDto exportAgencesToExcel();
 
-    void changeAccountStatus(String code, UserEntity currentUser);
+        // account-status methods
+        AccountStatusDto createAccountStatus(AccountStatusDto accountStatusToCreateDTO, UserEntity currentUser);
+
+        Page<AccountStatusDto> getAllAccountStatuses(Pageable pageable);
+
+        AccountStatusDto updateAccountStatus(String code, AccountStatusUpdateDto accountStatusToUpdateDTO,
+                        UserEntity currentUser);
+
+        void changeAccountStatus(String code, UserEntity currentUser);
 }

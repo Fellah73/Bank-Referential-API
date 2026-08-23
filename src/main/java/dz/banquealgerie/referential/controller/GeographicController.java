@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -26,6 +27,7 @@ import org.springframework.web.multipart.MultipartFile;
 import dz.banquealgerie.referential.domain.dto.ApiResponse;
 import dz.banquealgerie.referential.domain.dto.geographic.BulkImportResponseDto;
 import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneDto;
+import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneExcelExportDto;
 import dz.banquealgerie.referential.domain.dto.geographic.commune.CommuneUpdateDto;
 import dz.banquealgerie.referential.domain.dto.geographic.pays.PaysDto;
 import dz.banquealgerie.referential.domain.dto.geographic.pays.PaysUpdateDto;
@@ -539,6 +541,30 @@ public class GeographicController {
         }
     }
 
+    // search communes by libelle
+    @GetMapping("/commune/search")
+    @Tag(name = "3. Référentiel Géographique - Communes", description = "Gestion du référentiel des communes")
+    public ResponseEntity<ApiResponse<Page<CommuneDto>>> searchCommunes(
+            @RequestParam(required = false) String searchTerm,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        try {
+            Page<CommuneDto> communeList = geographicService.searchCommunes(searchTerm, pageable);
+
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<Page<CommuneDto>>builder()
+                    .success(true)
+                    .message("Commune list retrieved successfully")
+                    .statusCode(200)
+                    .data(communeList)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(ApiResponse.<Page<CommuneDto>>builder()
+                    .success(false)
+                    .message("Failed to retrieve commune list: " + e.getMessage())
+                    .statusCode(500)
+                    .build());
+        }
+    }
+
     // communes bulk-import
     @PostMapping(value = "/commune/bulk-import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Tag(name = "3. Référentiel Géographique - Communes", description = "Gestion du référentiel des communes")
@@ -566,7 +592,57 @@ public class GeographicController {
         }
     }
 
-    // export communes bulk
+    // communes bulk-import
+    @PostMapping(value = "/wilaya/{wilayaCode}/commune/bulk-import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Tag(name = "3. Référentiel Géographique - Communes", description = "Gestion du référentiel des communes")
+    public ResponseEntity<ApiResponse<BulkImportResponseDto>> importCommunesBulk(
+            @Validated @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code wilaya doit contenir exactement 2 chiffres") String wilayaCode,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "updateIfExists", defaultValue = "false") boolean updateIfExists,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        try {
+            BulkImportResponseDto response = geographicService.importCommunesByWilayaBulk(file, wilayaCode, currentUser,
+                    updateIfExists);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.<BulkImportResponseDto>builder()
+                    .success(true)
+                    .message("Importation des communes exécutée")
+                    .statusCode(HttpStatus.CREATED.value())
+                    .data(response)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.<BulkImportResponseDto>builder()
+                            .success(false)
+                            .message("Failed to import communes: " + e.getMessage())
+                            .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                            .build());
+        }
+    }
+
+    // export commune by wilayas bulk
+    @GetMapping("/wilaya/{wilayaCode}/commune/bulk-export")
+    @Tag(name = "3. Référentiel Géographique - Communes", description = "Gestion du référentiel des communes")
+    public ResponseEntity<InputStreamResource> exportCommuneByWilayaBulk(
+            @PathVariable String wilayaCode,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        CommuneExcelExportDto response = geographicService.exportCommuneByWilayaToExcel(wilayaCode);
+        InputStreamResource file = new InputStreamResource(response.stream());
+
+        ContentDisposition contentDisposition = ContentDisposition.builder("attachment")
+                .filename(response.fileName(), java.nio.charset.StandardCharsets.UTF_8)
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
+                .contentType(
+                        MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(file);
+    }
+
+    // export global communes bulk
     @GetMapping("/commune/bulk-export")
     @Tag(name = "3. Référentiel Géographique - Communes", description = "Gestion du référentiel des communes")
     public ResponseEntity<InputStreamResource> exportCommunesBulk(
