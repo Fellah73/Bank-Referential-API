@@ -151,6 +151,31 @@ public class RegulatoryController {
         }
     }
 
+    // search legal-forms by code or libelle
+    @GetMapping("/legal-forms/search")
+    @Tag(name = "7. Référentiel Réglementaire - Formes Juridiques", description = "Gestion du référentiel des formes juridiques")
+    public ResponseEntity<ApiResponse<Page<FormeJuridiqueDto>>> searchLegalForms(
+            @RequestParam(required = false) String searchTerm,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        try {
+            Page<FormeJuridiqueDto> legalFormList = regulatoryService.searchLegalForms(searchTerm, pageable);
+
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<Page<FormeJuridiqueDto>>builder()
+                    .success(true)
+                    .message("Legal form list retrieved successfully")
+                    .statusCode(200)
+                    .data(legalFormList)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.<Page<FormeJuridiqueDto>>builder()
+                            .success(false)
+                            .message("Failed to retrieve legal form list: " + e.getMessage())
+                            .statusCode(500)
+                            .build());
+        }
+    }
+
     // activity routes
 
     // create activity
@@ -251,6 +276,74 @@ public class RegulatoryController {
                     .statusCode(500)
                     .build());
         }
+    }
+
+    // search activities by code, libelle or domaine
+    @GetMapping("/activities/search")
+    @Tag(name = "8. Référentiel Réglementaire - Activités", description = "Gestion du référentiel des activités")
+    public ResponseEntity<ApiResponse<Page<ActivityDto>>> searchActivities(
+            @RequestParam(required = false) String searchTerm,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        try {
+            Page<ActivityDto> activityList = regulatoryService.searchActivities(searchTerm, pageable);
+
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<Page<ActivityDto>>builder()
+                    .success(true)
+                    .message("Activity list retrieved successfully")
+                    .statusCode(200)
+                    .data(activityList)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.<Page<ActivityDto>>builder()
+                            .success(false)
+                            .message("Failed to retrieve activity list: " + e.getMessage())
+                            .statusCode(500)
+                            .build());
+        }
+    }
+
+    // activities bulk-import
+    @PostMapping(value = "/activities/bulk-import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @Tag(name = "8. Référentiel Réglementaire - Activités", description = "Gestion du référentiel des Activités")
+    public ResponseEntity<ApiResponse<BulkImportResponseDto>> importActivitiesBulk(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "updateIfExists", defaultValue = "false") boolean updateIfExists,
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        try {
+            BulkImportResponseDto response = regulatoryService.importActivitiesBulk(file, currentUser, updateIfExists);
+
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.<BulkImportResponseDto>builder()
+                    .success(true)
+                    .message("Importation des Activités exécutée")
+                    .statusCode(HttpStatus.CREATED.value())
+                    .data(response)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.<BulkImportResponseDto>builder()
+                            .success(false)
+                            .message("Failed to import Activités: " + e.getMessage())
+                            .statusCode(HttpStatus.INTERNAL_SERVER_ERROR.value())
+                            .build());
+        }
+    }
+
+    // activities export
+    @GetMapping("/activities/bulk-export")
+    @Tag(name = "8. Référentiel Réglementaire - Activités", description = "Gestion du référentiel des Activités")
+    public ResponseEntity<InputStreamResource> exportActivitiesBulk(
+            @AuthenticationPrincipal UserEntity currentUser) {
+
+        ByteArrayInputStream response = regulatoryService.exportActivitiesToExcel();
+        InputStreamResource file = new InputStreamResource(response);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=activities_export.xlsx")
+                .contentType(
+                        MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(file);
     }
 
     // nif routes

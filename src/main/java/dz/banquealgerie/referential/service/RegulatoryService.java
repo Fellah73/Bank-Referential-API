@@ -27,6 +27,8 @@ public interface RegulatoryService {
 
     void changeLegalFormStatus(String code, UserEntity currentUser);
 
+    Page<FormeJuridiqueDto> searchLegalForms(String searchTerm, Pageable pageable);
+
     // activity routes
     ActivityDto createActivity(ActivityDto activityToCreateDTO, UserEntity currentUser);
 
@@ -35,6 +37,12 @@ public interface RegulatoryService {
     ActivityDto updateActivity(String code, ActivityUpdateDto activityToUpdateDTO, UserEntity currentUser);
 
     void changeActivityStatus(String code, UserEntity currentUser);
+
+    Page<ActivityDto> searchActivities(String searchTerm, Pageable pageable);
+
+    BulkImportResponseDto importActivitiesBulk(MultipartFile file, UserEntity currentUser, boolean updateIfExists);
+
+    ByteArrayInputStream exportActivitiesToExcel();
 
     // nif routes
     NifDto createNif(NifDto nifToCreateDTO, UserEntity currentUser);

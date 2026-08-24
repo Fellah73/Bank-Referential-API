@@ -65,5 +65,7 @@ public interface BankingService {
         AccountStatusDto updateAccountStatus(String code, AccountStatusUpdateDto accountStatusToUpdateDTO,
                         UserEntity currentUser);
 
+        Page<AccountStatusDto> searchAccountStatuses(String searchTerm, Pageable pageable);
+
         void changeAccountStatus(String code, UserEntity currentUser);
 }

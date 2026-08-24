@@ -7,9 +7,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.util.Streamable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -33,7 +36,9 @@ import dz.banquealgerie.referential.repositories.regulatory.FormJuridiqueReposit
 import dz.banquealgerie.referential.repositories.regulatory.NifRepository;
 import dz.banquealgerie.referential.service.RegulatoryService;
 import dz.banquealgerie.referential.utils.excel.ExcelUtils;
+import dz.banquealgerie.referential.utils.excel.regulatory.export.ActivitiesExcelExporter;
 import dz.banquealgerie.referential.utils.excel.regulatory.export.NifExcelExporter;
+import dz.banquealgerie.referential.utils.excel.regulatory.imports.ActivitiesExcelParser;
 import dz.banquealgerie.referential.utils.excel.regulatory.imports.NifExcelParser;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validator;
@@ -156,6 +161,36 @@ public class RegulatoryServiceImpl implements RegulatoryService {
         }
     }
 
+    // search countries by code, abreaviation or libelle
+    @Override
+    public Page<FormeJuridiqueDto> searchLegalForms(String searchTerm, Pageable pageable) {
+        try {
+            Page<FormeJuridiqueEntity> legalFormList = formJuridiqueRepository.findAll(pageable);
+
+            Streamable<FormeJuridiqueEntity> streamableLegalFormList = Streamable.of(legalFormList.getContent());
+
+            if (searchTerm != null && !searchTerm.isEmpty()) {
+                streamableLegalFormList = streamableLegalFormList
+                        .filter(legalForm -> legalForm.getLibelle().toLowerCase()
+                                .contains(searchTerm.toLowerCase())
+                                || legalForm.getAbreviation().toLowerCase().contains(searchTerm.toLowerCase())
+                                || legalForm.getCode().toLowerCase().contains(searchTerm.toLowerCase()));
+            }
+            if (streamableLegalFormList.isEmpty()) {
+                throw new RuntimeException("No legal form found for the given search criteria");
+            }
+
+            legalFormList = streamableLegalFormList.toList().stream()
+                    .collect(Collectors.collectingAndThen(Collectors.toList(),
+                            list -> new PageImpl<>(list, pageable, list.size())));
+
+            Page<FormeJuridiqueDto> legalFormDtoList = regulatoryMapper.toFormeJuridiqueDtoList(legalFormList);
+            return legalFormDtoList;
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
     // activity methods
 
     // create an activity
@@ -254,6 +289,141 @@ public class RegulatoryServiceImpl implements RegulatoryService {
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage());
         }
+    }
+
+    // search activities by code, libelle or domaine
+    @Override
+    public Page<ActivityDto> searchActivities(String searchTerm, Pageable pageable) {
+        try {
+            Page<ActivityEntity> activityList = activityRepository.findAll(pageable);
+
+            Streamable<ActivityEntity> streamableActivityList = Streamable.of(activityList.getContent());
+
+            if (searchTerm != null && !searchTerm.isEmpty()) {
+                streamableActivityList = streamableActivityList
+                        .filter(activity -> activity.getLibelle().toLowerCase()
+                                .contains(searchTerm.toLowerCase())
+                                || activity.getCode().toLowerCase().contains(searchTerm.toLowerCase())
+                                || activity.getDomaine().toLowerCase().contains(searchTerm.toLowerCase()));
+            }
+            if (streamableActivityList.isEmpty()) {
+                throw new RuntimeException("No activity found for the given search criteria");
+            }
+
+            activityList = streamableActivityList.toList().stream()
+                    .collect(Collectors.collectingAndThen(Collectors.toList(),
+                            list -> new PageImpl<>(list, pageable, list.size())));
+
+            Page<ActivityDto> activityDtoList = regulatoryMapper.toActivityDtoList(activityList);
+            return activityDtoList;
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    // activity bulk-import
+    @Override
+    @Transactional
+    public BulkImportResponseDto importActivitiesBulk(MultipartFile file, UserEntity currentUser,
+            boolean updateIfExists) {
+
+        if (!ExcelUtils.hasExcelFormat(file)) {
+            throw new IllegalArgumentException("Le fichier doit être au format Excel (.xlsx)");
+        }
+
+        List<ActivityDto> activityDtos;
+        try {
+            activityDtos = ActivitiesExcelParser.parse(file.getInputStream());
+        } catch (IOException e) {
+            throw new RuntimeException("Erreur lors de la lecture du fichier Excel : " + e.getMessage());
+        }
+
+        List<ImportErrorDto> errors = new ArrayList<>();
+        Set<String> processedActivities = new HashSet<>();
+
+        int successCount = 0;
+        int rowNumber = 2;
+        String username = (currentUser != null) ? currentUser.getUsername() : "SYSTEM";
+
+        for (ActivityDto dto : activityDtos) {
+
+            Set<ConstraintViolation<ActivityDto>> violations = validator.validate(dto);
+            if (!violations.isEmpty()) {
+                String errorMsg = violations.iterator().next().getMessage();
+                errors.add(new ImportErrorDto(rowNumber, dto.getCode(), errorMsg));
+                rowNumber++;
+                continue;
+            }
+
+            if (processedActivities.contains(dto.getCode())) {
+                errors.add(
+                        new ImportErrorDto(rowNumber, dto.getCode(), "Activité en double dans le même fichier Excel"));
+                rowNumber++;
+                continue;
+            }
+
+            ActivityEntity activityEntity = activityRepository.findByCode(dto.getCode());
+
+            if (activityEntity != null) {
+                if (!updateIfExists) {
+                    errors.add(
+                            new ImportErrorDto(rowNumber, dto.getCode(), "L'activité avec ce code existe déjà en BDD"));
+                    rowNumber++;
+                    continue;
+                }
+
+                activityEntity.setCodeSection(dto.getCodeSection());
+                activityEntity.setDomaine(dto.getDomaine());
+                activityEntity.setLibelle(dto.getLibelle());
+                activityEntity.setIsActive(true);
+                activityEntity.setUpdatedBy(username);
+                activityEntity.setUpdatedAt(java.time.LocalDateTime.now());
+
+                activityRepository.save(activityEntity);
+            } else {
+                ActivityEntity newActivity = ActivityEntity.builder()
+                        .code(dto.getCode())
+                        .codeSection(dto.getCodeSection())
+                        .domaine(dto.getDomaine())
+                        .libelle(dto.getLibelle())
+                        .isActive(true)
+                        .createdBy(username)
+                        .createdAt(java.time.LocalDateTime.now())
+                        .build();
+
+                activityRepository.save(newActivity);
+            }
+
+            processedActivities.add(dto.getCode());
+            successCount++;
+            rowNumber++;
+        }
+
+        return BulkImportResponseDto.builder()
+                .totalRows(activityDtos.size())
+                .successCount(successCount)
+                .errorCount(errors.size())
+                .errors(errors)
+                .build();
+    }
+
+    // activity bulk-export
+    @Override
+    @Transactional(readOnly = true)
+    public ByteArrayInputStream exportActivitiesToExcel() {
+
+        try {
+            List<ActivityEntity> activityEntities = activityRepository.findAll();
+
+            List<ActivityDto> activityDtos = activityEntities.stream()
+                    .map(regulatoryMapper::toActivityDto)
+                    .toList();
+
+            return ActivitiesExcelExporter.exportActivitiesToExcel(activityDtos);
+        } catch (Exception e) {
+            throw new RuntimeException("Erreur lors de l'exportation des Activités : " + e.getMessage());
+        }
+
     }
 
     // nif methods

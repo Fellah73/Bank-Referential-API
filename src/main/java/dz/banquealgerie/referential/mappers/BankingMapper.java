@@ -77,6 +77,7 @@ public class BankingMapper {
         AccountStatusDto dto = new AccountStatusDto();
         dto.setCode(accountStatus.getCode());
         dto.setLibelle(accountStatus.getLibelle());
+        dto.setIsActive(accountStatus.getIsActive());
         return dto;
     }
 

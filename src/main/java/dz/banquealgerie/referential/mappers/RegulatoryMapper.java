@@ -30,6 +30,7 @@ public class RegulatoryMapper {
         formeJuridiqueDto.setCode(dto.getCode());
         formeJuridiqueDto.setAbreviation(dto.getAbreviation());
         formeJuridiqueDto.setLibelle(dto.getLibelle());
+        formeJuridiqueDto.setIsActive(dto.getIsActive());
         return formeJuridiqueDto;
     }
 
@@ -68,6 +69,7 @@ public class RegulatoryMapper {
         activityDto.setCodeSection(entity.getCodeSection());
         activityDto.setDomaine(entity.getDomaine());
         activityDto.setLibelle(entity.getLibelle());
+        activityDto.setIsActive(entity.getIsActive());
         return activityDto;
     }
 

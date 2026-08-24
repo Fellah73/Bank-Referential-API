@@ -324,7 +324,7 @@ public class BankingController {
 
     // search agence
     @GetMapping("/agence/search")
-    @Tag(name = "4. Référentiel Bancaire - Agences", description = "Gestion du référentiel des agences")
+    @Tag(name = "5. Référentiel Bancaire - Agences", description = "Gestion du référentiel des agences")
     public ResponseEntity<ApiResponse<Page<AgenceDto>>> searchAgences(
             @RequestParam(required = false) String searchTerm,
             @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -485,6 +485,31 @@ public class BankingController {
                     .message("Failed to create account status: " + e.getMessage())
                     .statusCode(500)
                     .build());
+        }
+    }
+
+    // search account-status by code or libelle
+    @GetMapping("/account-status/search")
+    @Tag(name = "6. Référentiel Bancaire - Statuts de Compte", description = "Gestion du référentiel des statuts de compte")
+    public ResponseEntity<ApiResponse<Page<AccountStatusDto>>> searchAccountStatuses(
+            @RequestParam(required = false) String searchTerm,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        try {
+            Page<AccountStatusDto> accountStatusList = bankingService.searchAccountStatuses(searchTerm, pageable);
+
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<Page<AccountStatusDto>>builder()
+                    .success(true)
+                    .message("Account status list retrieved successfully")
+                    .statusCode(200)
+                    .data(accountStatusList)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.<Page<AccountStatusDto>>builder()
+                            .success(false)
+                            .message("Failed to retrieve account status list: " + e.getMessage())
+                            .statusCode(500)
+                            .build());
         }
     }
 

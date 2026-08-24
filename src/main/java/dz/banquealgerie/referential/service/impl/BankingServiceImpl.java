@@ -778,4 +778,33 @@ public class BankingServiceImpl implements BankingService {
         }
     }
 
+    // search account statuses by code or libelle
+    @Override
+    public Page<AccountStatusDto> searchAccountStatuses(String searchTerm, Pageable pageable) {
+        try {
+            Page<AccountStatusEntity> accountStatusList = accountStatusRepository.findAll(pageable);
+
+            Streamable<AccountStatusEntity> streamableAccountStatusList = Streamable.of(accountStatusList.getContent());
+
+            if (searchTerm != null && !searchTerm.isEmpty()) {
+                streamableAccountStatusList = streamableAccountStatusList
+                        .filter(accountStatus -> accountStatus.getLibelle().toLowerCase()
+                                .contains(searchTerm.toLowerCase())
+                                || accountStatus.getCode().toLowerCase().contains(searchTerm.toLowerCase()));
+            }
+            if (streamableAccountStatusList.isEmpty()) {
+                throw new RuntimeException("No account status found for the given search criteria");
+            }
+
+            accountStatusList = streamableAccountStatusList.toList().stream()
+                    .collect(Collectors.collectingAndThen(Collectors.toList(),
+                            list -> new PageImpl<>(list, pageable, list.size())));
+
+            Page<AccountStatusDto> accountStatusDtoList = bankingMapper.toAccountStatusDtoList(accountStatusList);
+            return accountStatusDtoList;
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
 }
