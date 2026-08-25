@@ -2,6 +2,7 @@ package dz.banquealgerie.referential.domain.dto.regulatory.nif;
 
 import java.time.LocalDate;
 
+import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -17,4 +18,7 @@ public class NifDto extends NifUpdateDto {
     private String nif;
 
     private LocalDate dateCreation;
+
+    @Nullable
+    private Boolean isActive;
 }

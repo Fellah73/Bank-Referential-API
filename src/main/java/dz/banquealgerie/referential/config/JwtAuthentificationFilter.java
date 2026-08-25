@@ -1,9 +1,11 @@
 package dz.banquealgerie.referential.config;
 
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.List;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -57,12 +59,15 @@ public class JwtAuthentificationFilter extends OncePerRequestFilter {
                             .findFirst()
                             .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé avec l'email : " + email));
 
+                    List<GrantedAuthority> authorities = List.of(
+                            new SimpleGrantedAuthority("ROLE_" + currentUser.getRole().name()));
+
                     request.setAttribute("userEmail", email);
 
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                             currentUser,
                             null,
-                            new ArrayList<>());
+                            authorities);
 
                     SecurityContextHolder.getContext().setAuthentication(authentication);
                 } else {

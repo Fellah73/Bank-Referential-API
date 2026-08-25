@@ -40,7 +40,6 @@ public class ActivitiesExcelParser {
                 activity.setCodeSection(ExcelUtils.getCellValueAsString(currentRow.getCell(1)));
                 activity.setDomaine(ExcelUtils.getCellValueAsString(currentRow.getCell(2)));
                 activity.setLibelle(ExcelUtils.getCellValueAsString(currentRow.getCell(3)));
-                System.out.println(activity);
                 activities.add(activity);
             }
 

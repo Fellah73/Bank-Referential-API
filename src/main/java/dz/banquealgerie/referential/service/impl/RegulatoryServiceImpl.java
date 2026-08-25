@@ -532,6 +532,36 @@ public class RegulatoryServiceImpl implements RegulatoryService {
         }
     }
 
+    // search nif by nif or designation
+    @Override
+    @Transactional(readOnly = true)
+    public Page<NifResponseDto> searchNifs(String searchTerm, Pageable pageable) {
+        try {
+            Page<NifEntity> nifList = nifRepository.findAll(pageable);
+
+            Streamable<NifEntity> streamableNifList = Streamable.of(nifList.getContent());
+
+            if (searchTerm != null && !searchTerm.isEmpty()) {
+                streamableNifList = streamableNifList
+                        .filter(nif -> nif.getNif().toLowerCase()
+                                .contains(searchTerm.toLowerCase())
+                                || nif.getDesignation().toLowerCase().contains(searchTerm.toLowerCase()));
+            }
+            if (streamableNifList.isEmpty()) {
+                throw new RuntimeException("No NIF found for the given search criteria");
+            }
+
+            nifList = streamableNifList.toList().stream()
+                    .collect(Collectors.collectingAndThen(Collectors.toList(),
+                            list -> new PageImpl<>(list, pageable, list.size())));
+
+            Page<NifResponseDto> nifDtoList = regulatoryMapper.toNifResponseDtoList(nifList);
+            return nifDtoList;
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
     // nif bulk-import
     @Override
     @Transactional

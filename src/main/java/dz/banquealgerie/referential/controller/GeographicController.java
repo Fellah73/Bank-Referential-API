@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -51,6 +52,7 @@ public class GeographicController {
 
     // create country
     @PostMapping("/pays")
+    @PreAuthorize("hasRole('ADMIN')")
     @Tag(name = "1. Référentiel Géographique - Pays", description = "Gestion du référentiel des pays")
     public ResponseEntity<ApiResponse<PaysDto>> createCountry(
             @Valid @RequestBody PaysDto paysToCreateDTO,
@@ -124,6 +126,7 @@ public class GeographicController {
 
     // update country
     @PatchMapping("/pays/{code}")
+    @PreAuthorize("hasRole('ADMIN')")
     @Tag(name = "1. Référentiel Géographique - Pays", description = "Gestion du référentiel des pays")
     public ResponseEntity<ApiResponse<PaysDto>> updateCountry(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{3}$", message = "Le code pays doit contenir exactement 3 chiffres") String code,
@@ -151,6 +154,7 @@ public class GeographicController {
 
     // change country status
     @PatchMapping("/pays/{code}/status")
+    @PreAuthorize("hasRole('ADMIN')")
     @Tag(name = "1. Référentiel Géographique - Pays", description = "Gestion du référentiel des pays")
     public ResponseEntity<ApiResponse<Void>> changeCountryStatus(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{3}$", message = "Le code pays doit contenir exactement 3 chiffres") String code,
@@ -200,6 +204,7 @@ public class GeographicController {
 
     // bulk import countries
     @PostMapping(value = "/pays/bulk-import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
     @Tag(name = "1. Référentiel Géographique - Pays", description = "Gestion du référentiel des pays")
     public ResponseEntity<ApiResponse<BulkImportResponseDto>> importPaysBulk(
             @RequestParam("file") MultipartFile file,
@@ -243,6 +248,7 @@ public class GeographicController {
 
     // wilaya routes
     @PostMapping("/wilaya")
+    @PreAuthorize("hasRole('ADMIN')")
     @Tag(name = "2. Référentiel Géographique - Wilayas", description = "Gestion du référentiel des wilayas")
     public ResponseEntity<ApiResponse<WilayaDto>> createWilaya(
             @Valid @RequestBody WilayaDto wilayaToCreateDTO,
@@ -316,6 +322,7 @@ public class GeographicController {
 
     // update wilaya
     @PatchMapping("/wilaya/{code}")
+    @PreAuthorize("hasRole('ADMIN')")
     @Tag(name = "2. Référentiel Géographique - Wilayas", description = "Gestion du référentiel des wilayas")
     public ResponseEntity<ApiResponse<WilayaDto>> updateWilaya(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code wilaya doit contenir exactement 2 chiffres") String code,
@@ -343,6 +350,7 @@ public class GeographicController {
 
     // change wilaya status
     @PatchMapping("/wilaya/{code}/status")
+    @PreAuthorize("hasRole('ADMIN')")
     @Tag(name = "2. Référentiel Géographique - Wilayas", description = "Gestion du référentiel des wilayas")
     public ResponseEntity<ApiResponse<Void>> changeWilayaStatus(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code wilaya doit contenir exactement 2 chiffres") String code,
@@ -392,6 +400,7 @@ public class GeographicController {
 
     // import wilayas bulk
     @PostMapping(value = "/wilaya/bulk-import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
     @Tag(name = "2. Référentiel Géographique - Wilayas", description = "Gestion du référentiel des wilayas")
     public ResponseEntity<ApiResponse<BulkImportResponseDto>> importWilayasBulk(
             @RequestParam("file") MultipartFile file,
@@ -439,6 +448,7 @@ public class GeographicController {
 
     // create commune
     @PostMapping("/wilaya/{wilayaCode}/commune")
+    @PreAuthorize("hasRole('ADMIN')")
     @Tag(name = "3. Référentiel Géographique - Communes", description = "Gestion du référentiel des communes")
     public ResponseEntity<ApiResponse<CommuneDto>> createCommune(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code wilaya doit contenir exactement 2 chiffres") String wilayaCode,
@@ -491,6 +501,7 @@ public class GeographicController {
 
     // update commune
     @PatchMapping("/wilaya/{wilayaCode}/commune/{communeCode}")
+    @PreAuthorize("hasRole('ADMIN')")
     @Tag(name = "3. Référentiel Géographique - Communes", description = "Gestion du référentiel des communes")
     public ResponseEntity<ApiResponse<CommuneDto>> updateCommune(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code wilaya doit contenir exactement 2 chiffres") String wilayaCode,
@@ -519,6 +530,7 @@ public class GeographicController {
 
     // change commune status
     @PatchMapping("/commune/{communeCode}/status")
+    @PreAuthorize("hasRole('ADMIN')")
     @Tag(name = "3. Référentiel Géographique - Communes", description = "Gestion du référentiel des communes")
     public ResponseEntity<ApiResponse<Void>> changeCommuneStatus(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{4}$", message = "Le code commune doit contenir exactement 4 chiffres") String communeCode,
@@ -567,6 +579,7 @@ public class GeographicController {
 
     // communes bulk-import
     @PostMapping(value = "/commune/bulk-import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
     @Tag(name = "3. Référentiel Géographique - Communes", description = "Gestion du référentiel des communes")
     public ResponseEntity<ApiResponse<BulkImportResponseDto>> importCommunesBulk(
             @RequestParam("file") MultipartFile file,
@@ -594,6 +607,7 @@ public class GeographicController {
 
     // communes bulk-import
     @PostMapping(value = "/wilaya/{wilayaCode}/commune/bulk-import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
     @Tag(name = "3. Référentiel Géographique - Communes", description = "Gestion du référentiel des communes")
     public ResponseEntity<ApiResponse<BulkImportResponseDto>> importCommunesBulk(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code wilaya doit contenir exactement 2 chiffres") String wilayaCode,

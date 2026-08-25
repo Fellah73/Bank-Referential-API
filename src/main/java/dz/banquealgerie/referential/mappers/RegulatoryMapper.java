@@ -106,6 +106,7 @@ public class RegulatoryMapper {
         nifDto.setDateCreation(entity.getDateCreation());
         nifDto.setDesignation(entity.getDesignation());
         nifDto.setFormeJuridiqueCode(entity.getFormeJuridique().getCode());
+        nifDto.setIsActive(entity.getIsActive());
         return nifDto;
     }
 

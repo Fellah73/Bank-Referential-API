@@ -11,6 +11,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -50,6 +51,7 @@ public class RegulatoryController {
 
     // create legal form
     @PostMapping("/legal-forms")
+    @PreAuthorize("hasRole('ADMIN')")
     @Tag(name = "7. Référentiel Réglementaire - Formes Juridiques", description = "Gestion du référentiel des formes juridiques")
     public ResponseEntity<ApiResponse<FormeJuridiqueDto>> createLegalForm(
             @Valid @RequestBody FormeJuridiqueDto formeJuridiqueDto,
@@ -100,6 +102,7 @@ public class RegulatoryController {
 
     // update legal-form
     @PatchMapping("/legal-forms/{code}")
+    @PreAuthorize("hasRole('ADMIN')")
     @Tag(name = "7. Référentiel Réglementaire - Formes Juridiques", description = "Gestion du référentiel des formes juridiques")
     public ResponseEntity<ApiResponse<FormeJuridiqueDto>> updateLegalForm(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code forme juridique doit contenir exactement 2 chiffres") String code,
@@ -128,6 +131,7 @@ public class RegulatoryController {
 
     // change legal-form status
     @PatchMapping("/legal-forms/{code}/status")
+    @PreAuthorize("hasRole('ADMIN')")
     @Tag(name = "7. Référentiel Réglementaire - Formes Juridiques", description = "Gestion du référentiel des formes juridiques")
     public ResponseEntity<ApiResponse<Void>> changeLegalFormStatus(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{2}$", message = "Le code forme juridique doit contenir exactement 2 chiffres") String code,
@@ -180,6 +184,7 @@ public class RegulatoryController {
 
     // create activity
     @PostMapping("/activities")
+    @PreAuthorize("hasRole('ADMIN')")
     @Tag(name = "8. Référentiel Réglementaire - Activités", description = "Gestion du référentiel des activités")
     public ResponseEntity<ApiResponse<ActivityDto>> createActivity(
             @Valid @RequestBody ActivityDto activityToCreateDTO,
@@ -230,6 +235,7 @@ public class RegulatoryController {
 
     // update activities
     @PatchMapping("/activities/{code}")
+    @PreAuthorize("hasRole('ADMIN')")
     @Tag(name = "8. Référentiel Réglementaire - Activités", description = "Gestion du référentiel des activités")
     public ResponseEntity<ApiResponse<ActivityDto>> updateActivity(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{6}$", message = "Le code activité doit contenir exactement 6 chiffres") String code,
@@ -256,6 +262,7 @@ public class RegulatoryController {
 
     // change activity status
     @PatchMapping("/activities/{code}/status")
+    @PreAuthorize("hasRole('ADMIN')")
     @Tag(name = "8. Référentiel Réglementaire - Activités", description = "Gestion du référentiel des activités")
     public ResponseEntity<ApiResponse<Void>> changeActivityStatus(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{6}$", message = "Le code activité doit contenir exactement 6 chiffres") String code,
@@ -305,6 +312,7 @@ public class RegulatoryController {
 
     // activities bulk-import
     @PostMapping(value = "/activities/bulk-import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
     @Tag(name = "8. Référentiel Réglementaire - Activités", description = "Gestion du référentiel des Activités")
     public ResponseEntity<ApiResponse<BulkImportResponseDto>> importActivitiesBulk(
             @RequestParam("file") MultipartFile file,
@@ -350,6 +358,7 @@ public class RegulatoryController {
 
     // create nif
     @PostMapping("/nif")
+   @PreAuthorize("hasRole('ADMIN')")
     @Tag(name = "9. Référentiel Réglementaire - NIF", description = "Gestion du référentiel des NIF")
     public ResponseEntity<ApiResponse<NifDto>> createNif(
             @Valid @RequestBody NifDto nifToCreateDTO,
@@ -400,6 +409,7 @@ public class RegulatoryController {
 
     // update nif
     @PatchMapping("/nif/{code}")
+    @PreAuthorize("hasRole('ADMIN')")
     @Tag(name = "9. Référentiel Réglementaire - NIF", description = "Gestion du référentiel des NIF")
     public ResponseEntity<ApiResponse<NifResponseDto>> updateNif(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{15,20}$", message = "Le code NIF doit contenir entre 15 et 20 chiffres") String code,
@@ -426,6 +436,7 @@ public class RegulatoryController {
 
     // change nif status
     @PatchMapping("/nif/{code}/status")
+    @PreAuthorize("hasRole('ADMIN')")
     @Tag(name = "9. Référentiel Réglementaire - NIF", description = "Gestion du référentiel des NIF")
     public ResponseEntity<ApiResponse<Void>> changeNifStatus(
             @Validated @PathVariable @Pattern(regexp = "^[0-9]{15,20}$", message = "Le code NIF doit contenir entre 15 et 20 chiffres") String code,
@@ -448,8 +459,34 @@ public class RegulatoryController {
         }
     }
 
+    // search nif by nif or designation
+    @GetMapping("/nif/search")
+    @Tag(name = "9. Référentiel Réglementaire - NIF", description = "Gestion du référentiel des NIF")
+    public ResponseEntity<ApiResponse<Page<NifResponseDto>>> searchNifs(
+            @RequestParam(required = false) String searchTerm,
+            @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        try {
+            Page<NifResponseDto> nifList = regulatoryService.searchNifs(searchTerm, pageable);
+
+            return ResponseEntity.status(HttpStatus.OK).body(ApiResponse.<Page<NifResponseDto>>builder()
+                    .success(true)
+                    .message("NIF list retrieved successfully")
+                    .statusCode(200)
+                    .data(nifList)
+                    .build());
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.<Page<NifResponseDto>>builder()
+                            .success(false)
+                            .message("Failed to retrieve NIF list: " + e.getMessage())
+                            .statusCode(500)
+                            .build());
+        }
+    }
+
     // nif bulk-import
     @PostMapping(value = "/nif/bulk-import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('ADMIN')")
     @Tag(name = "9. Référentiel Réglementaire - NIF", description = "Gestion du référentiel des NIF")
     public ResponseEntity<ApiResponse<BulkImportResponseDto>> importNifsBulk(
             @RequestParam("file") MultipartFile file,

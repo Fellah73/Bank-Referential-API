@@ -53,6 +53,8 @@ public interface RegulatoryService {
 
     void changeNifStatus(String code, UserEntity currentUser);
 
+    Page<NifResponseDto> searchNifs(String searchTerm, Pageable pageable);
+
     BulkImportResponseDto importNifsBulk(MultipartFile file, UserEntity currentUser, boolean updateIfExists);
 
     ByteArrayInputStream exportNifsToExcel();
